@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 
 from project_explorer.data.project import ProjectSummary
+from project_explorer.data.query import Query
 
 from project_explorer.ui.search_bar import SearchBar
 
@@ -29,7 +30,7 @@ class ProjectOverview:
         self.frame.pack(fill="x")
 
         self.callbacks: list[Callable[[Path | None], Any]] = []
-        self.query: list[str] = []
+        self.query: Query | None = None
 
         self.search_bar = SearchBar(self.frame)
         self.search_bar.on_action_required(self._search_update)
@@ -94,8 +95,8 @@ class ProjectOverview:
 
         self._update_table()
 
-    def _search_update(self, query: str, forced: bool) -> None:
-        self.query = [tag.strip() for tag in query.split(",") if tag.strip()]
+    def _search_update(self, query: Query | None, forced: bool) -> None:
+        self.query = query
 
         if forced:
             self.set_path(self.path, True)
@@ -109,7 +110,9 @@ class ProjectOverview:
             self.tree.delete(i)
 
         for path, project in self.projects.items():
-            if self.query and not any(tag in project.tags for tag in self.query):
+            if (self.query is not None) and not self.query.evaluate(
+                project.model_dump()
+            ):
                 continue
 
             self.tree.insert(

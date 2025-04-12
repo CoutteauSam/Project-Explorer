@@ -26,4 +26,10 @@ Project Explorer gives a general overview all projects inside a parent folder.
 
 ### *Advanced* Querying
 
-Within the search, you can type a comma separated list of tags to filter the project overview.
+Within the search, you query as follows
+
+* Directly, `state:draft` (state==draft) or `tags:art` (has tag art)
+  which can be prefixed with `-` to negate the query (`tags:-art`)
+* An OR of direct queries `state:-draft OR tags:art`
+* An AND of OR and Direct queries `state:-draft AND (tags:art or tags:-complex)`
+
