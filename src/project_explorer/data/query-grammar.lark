@@ -1,0 +1,20 @@
+start : or_base_expression
+      | or_expression
+      | and_expression
+
+and_expression: and_base_expression ( "AND" and_base_expression )*
+
+and_base_expression: "(" or_expression ")"
+                   | or_base_expression
+
+or_expression: or_base_expression ( "OR" or_base_expression )*
+
+or_base_expression: ID ":" LITERAL
+                  | ID ":" INVERT LITERAL
+
+ID: /[-_a-zA-Z]+/
+LITERAL: /[^ ,:()\-]+/
+INVERT: "-"
+
+%import common.WS
+%ignore WS
