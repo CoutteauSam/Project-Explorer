@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project_explorer"
+version = "0.0.1"
+dependencies = [
+    "pillow",
+    'pydantic',
+]
+
+[tool.setuptools.package-data]
+"project_explorer" = ["py.typed"]
+
+[project.gui-scripts]
+project-explorer = "project_explorer:main"
