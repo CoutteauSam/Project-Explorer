@@ -1,3 +1,5 @@
+"""Package root"""
+
 from project_explorer.viewer import main
 
 
