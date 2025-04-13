@@ -77,9 +77,6 @@ class ProjectExplorerTk:
         self.new_button = Button(self.button_bar, text="New", command=self._new)
         self.new_button.pack(side="left")
 
-        # self.preview = Preview(main_frame)
-        # self.preview.grid(row=2, column=0, columnspan=2)
-
         self.project_data = ProjectData(main_frame)
         self.project_data.grid(row=2, column=0, sticky="NSEW")
 
