@@ -3,7 +3,6 @@
 import os
 import platform
 import subprocess
-from typing import Any
 from pathlib import Path
 from tkinter import (
     Tk,
@@ -20,6 +19,9 @@ from project_explorer.data.project import (
     Project,
 )
 
+from project_explorer.model.projects import ProjectsModel
+from project_explorer.model.signal import Cause
+
 from project_explorer.ui.project_overview import ProjectOverview
 from project_explorer.ui.project_data import ProjectData
 from project_explorer.ui.thumbnails import Thumbnails
@@ -30,16 +32,21 @@ from project_explorer.ui.statistics import Statistics
 class ProjectExplorerTk:
     """Main application"""
 
-    current_folder: Path | None = None
+    because_open_folder: Cause
+    because_new_project: Cause
 
     def __init__(self) -> None:
         self.application = Tk()
         self.application.title("Project Explorer")
         self.application.geometry("1000x700")
 
+        self.model = ProjectsModel()
+        self.because_open_folder = Cause(ProjectExplorerTk, "open folder")
+        self.because_new_project = Cause(ProjectExplorerTk, "new project")
+
         self._setup_ui()
 
-        self.application.bind("<Control-s>", self._save)
+        self.application.bind("<Control-s>", lambda _: self.project_data.trigger_save())
 
     def run(self) -> None:
         """Start the application"""
@@ -60,15 +67,21 @@ class ProjectExplorerTk:
 
         self.project_view = ProjectOverview(main_frame)
         self.project_view.grid(row=0, column=0, sticky="NSEW")
-        self.project_view.on_project_selected(self._on_select_project)
+        self.project_view.set_model(self.model)
 
         self.statistics = Statistics(main_frame)
         self.statistics.grid(row=0, column=1, sticky="NSEW")
+        self.statistics.set_model(self.model)
 
         self.button_bar = Frame(main_frame)
         self.button_bar.grid(row=1, column=0, columnspan=2, sticky="NSEW")
 
-        self.save_button = Button(self.button_bar, text="Save", command=self._save)
+        # pylint: disable=unnecessary-lambda
+        self.save_button = Button(
+            self.button_bar,
+            text="Save",
+            command=lambda: self.project_data.trigger_save(),
+        )
         self.save_button.pack(side="left")
 
         self.open_button = Button(self.button_bar, text="Open", command=self._open)
@@ -79,9 +92,11 @@ class ProjectExplorerTk:
 
         self.project_data = ProjectData(main_frame)
         self.project_data.grid(row=2, column=0, sticky="NSEW")
+        self.project_data.set_model(self.model)
 
         self.thumbnails = Thumbnails(main_frame)
         self.thumbnails.grid(row=2, column=1, sticky="NSEW")
+        self.thumbnails.set_model(self.model)
 
     def _setup_menu(self) -> None:
         menubar = Menu(self.application)
@@ -94,29 +109,15 @@ class ProjectExplorerTk:
 
     def _choose_folder(self) -> None:
         folder = filedialog.askdirectory()
-        if folder:
-            self.project_view.set_path(Path(folder))
-            self.current_folder = Path(folder)
-        else:
-            self.project_view.set_path(None)
-            self.current_folder = None
-
-    def _on_select_project(self, path: Path | None) -> None:
-        self.project_data.load_project_data(path)
-        self.thumbnails.load_thumbnails(path)
-
-    def _save(self, *_: Any) -> None:
-        path = self.project_data.get_path()
-
-        if path is None:
-            return
-
-        data = self.project_data.get_save_data()
-
-        self._save_specific(path, data)
+        self.model.load_projects_from_path(
+            Path(folder) if folder else None, self.because_open_folder
+        )
 
     def _new(self) -> None:
-        if self.current_folder is None:
+        path = self.model.get_path()
+
+        if path is None:
+            # TODO: communicate this to the user
             return
 
         answer = simpledialog.askstring(
@@ -126,38 +127,26 @@ class ProjectExplorerTk:
         if answer is None:
             return
 
-        if (self.current_folder / answer).exists():
+        if (path / answer).exists():
+            # TODO: communicate this to the user
             return
 
-        self._save_specific(
-            self.current_folder / answer,
+        self.model.save_project(
+            path / answer,
             Project(
                 project_summary=ProjectSummary(
                     name="new project", state="new", tags=[]
                 ),
                 description="",
             ),
+            self.because_new_project,
         )
 
-    def _save_specific(self, path: Path, data: Project) -> None:
-        path.mkdir(exist_ok=True)
-
-        with open(path / "project-info.json", "w", encoding="utf-8") as file:
-            file.write(data.project_summary.model_dump_json())
-
-        with open(path / "description.md", "w", encoding="utf-8") as file:
-            file.write(data.description)
-
-        (path / "thumbnails").mkdir(exist_ok=True)
-
-        self.project_data.load_project_data(path)
-        self.thumbnails.load_thumbnails(path)
-        self.project_view.update_project(path, data.project_summary)
-
     def _open(self) -> None:
-        path = self.project_data.get_path()
+        path = self.model.get_path()
 
         if path is None:
+            # TODO: communicate this to the user
             return
 
         if os.name in ["nt", "ce"]:

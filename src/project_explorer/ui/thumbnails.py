@@ -1,6 +1,5 @@
 """UI code for showing image thumbnails"""
 
-from pathlib import Path
 from tkinter import (
     Scrollbar,
     Canvas,
@@ -13,10 +12,14 @@ from PIL import Image, ImageTk
 
 from project_explorer.utility.typing import copy_method_params
 
+from project_explorer.model.projects import ProjectsModel
+
 
 # pylint: disable=too-few-public-methods
 class Thumbnails(Frame):
     """UI element displaying the thumbnails of a project"""
+
+    model: ProjectsModel | None = None
 
     @copy_method_params(Frame.__init__)
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -47,8 +50,27 @@ class Thumbnails(Frame):
             ),
         )
 
-    def load_thumbnails(self, path: Path | None) -> None:
+    def set_model(self, model: ProjectsModel | None) -> None:
+        """Sets the ui model for this widget"""
+        self.model = model
+        self._load_thumbnails()
+
+        if model is None:
+            return
+
+        model.project_selected.listen(lambda _: self._load_thumbnails())
+
+    def _load_thumbnails(self) -> None:
         """Load new thumbnails from a given path"""
+
+        # pylint: disable=duplicate-code
+        if self.model is None:
+            return
+
+        path = self.model.get_project_under_edit()
+
+        if path is None:
+            return
 
         for widget in self.thumb_inner.winfo_children():
             widget.destroy()
