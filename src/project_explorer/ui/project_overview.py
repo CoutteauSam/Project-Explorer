@@ -1,6 +1,5 @@
 """UI code for displaying a list of projects"""
 
-from collections.abc import Callable
 from typing import Any
 from pathlib import Path
 from tkinter import (
@@ -8,12 +7,13 @@ from tkinter import (
     Frame,
 )
 
-from pydantic import ValidationError
-
 from project_explorer.utility.typing import copy_method_params
 
 from project_explorer.data.project import ProjectSummary
 from project_explorer.data.query import Query
+
+from project_explorer.model.signal import Cause
+from project_explorer.model.projects import ProjectsModel
 
 from project_explorer.ui.search_bar import SearchBar
 
@@ -23,12 +23,16 @@ class ProjectOverview(Frame):
 
     path: Path | None = None
     projects: dict[Path, ProjectSummary] = {}
+    model: ProjectsModel | None = None
+
+    because_list_selection: Cause
 
     @copy_method_params(Frame.__init__)
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        self.callbacks: list[Callable[[Path | None], Any]] = []
+        self.because_list_selection = Cause(ProjectOverview, "item selected in list")
+
         self.query: Query | None = None
 
         self.search_bar = SearchBar(self)
@@ -48,60 +52,30 @@ class ProjectOverview(Frame):
         self.tree.heading("tags", text="Tags")
         self.tree.bind("<<TreeviewSelect>>", self._on_select_project)
 
-    def on_project_selected(self, callback: Callable[[Path | None], Any]) -> None:
-        """Add a callback for when a project is selected by the user"""
+    def set_model(self, model: ProjectsModel | None) -> None:
+        """Sets the ui model for this widget"""
+        self.model = model
+        self._update_table()
 
-        self.callbacks.append(callback)
-
-    def set_path(self, path: Path | None, forced: bool = False) -> None:
-        """Set the root path from which projects are loaded"""
-
-        if path == self.path and not forced:
+        if model is None:
             return
 
-        self.path = path
-
-        self._scan_projects()
+        model.projects_loaded.listen(lambda _: self._update_table())
+        # not very efficient but it works
+        model.project_updated.listen(lambda _: self._update_table())
 
     def update_project(self, path: Path, project: ProjectSummary) -> None:
         """Update or add project information"""
         self.projects[path] = project
         self._update_table()
 
-    def _scan_projects(self) -> None:
-        self.projects.clear()
-
-        if self.path is None:
-            self._update_table()
+    def _search_update(self, query: Query | None) -> None:
+        if self.model is None:
             return
 
-        for sub_directory in self.path.iterdir():
-            if not sub_directory.is_dir():
-                continue
-
-            info_path = sub_directory / "project-info.json"
-
-            if not info_path.exists() or not info_path.is_file():
-                continue
-
-            try:
-                project = ProjectSummary.model_validate_json(
-                    info_path.read_text(encoding="utf-8")
-                )
-            except (ValidationError, OSError):
-                continue
-
-            self.projects[sub_directory] = project
-
-        self._update_table()
-
-    def _search_update(self, query: Query | None, forced: bool) -> None:
         self.query = query
 
-        if forced:
-            self.set_path(self.path, True)
-        else:
-            self._update_table()
+        self._update_table()
 
     def _update_table(self) -> None:
         old_selection = self.tree.selection()
@@ -109,7 +83,15 @@ class ProjectOverview(Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
 
-        for path, project in self.projects.items():
+        if self.model is None:
+            return
+
+        projects = self.model.get_loaded_projects()
+
+        if projects is None:
+            return
+
+        for path, project in projects.items():
             if (self.query is not None) and not self.query.evaluate(
                 project.model_dump()
             ):
@@ -133,8 +115,10 @@ class ProjectOverview(Frame):
         self.tree.selection_set(valid_selection)
 
     def _on_select_project(self, _: Any) -> None:
+        if self.model is None:
+            return
+
         selection = self.tree.selection()
         selected = Path(selection[0]) if selection else None
 
-        for callback in self.callbacks:
-            callback(selected)
+        self.model.select_project_to_edit(selected, self.because_list_selection)

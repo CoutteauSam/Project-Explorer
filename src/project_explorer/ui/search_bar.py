@@ -22,7 +22,7 @@ class SearchBar(Frame):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        self.callbacks: list[Callable[[Query | None, bool], Any]] = []
+        self.callbacks: list[Callable[[Query | None], Any]] = []
 
         self.search_var = Entry(self)
         self.search_var.pack(side="left", expand=True, fill="x")
@@ -31,12 +31,7 @@ class SearchBar(Frame):
         self.search_button = Button(self, text="Search", command=self._trigger_search)
         self.search_button.pack(side="left")
 
-        self.refresh_button = Button(
-            self, text="Refresh", command=self._trigger_refresh
-        )
-        self.refresh_button.pack(side="left")
-
-    def on_action_required(self, callback: Callable[[Query | None, bool], Any]) -> None:
+    def on_action_required(self, callback: Callable[[Query | None], Any]) -> None:
         """Add a callback to trigger when the user confirms some action within the search bar"""
         self.callbacks.append(callback)
 
@@ -50,8 +45,4 @@ class SearchBar(Frame):
 
     def _trigger_search(self, *_: Any) -> None:
         for callback in self.callbacks:
-            callback(self._query_or_none(), False)
-
-    def _trigger_refresh(self, *_: Any) -> None:
-        for callback in self.callbacks:
-            callback(self._query_or_none(), True)
+            callback(self._query_or_none())

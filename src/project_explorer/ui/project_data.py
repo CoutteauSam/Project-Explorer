@@ -1,7 +1,6 @@
 """UI code for showing project summary data"""
 
 from typing import Any
-from pathlib import Path
 from tkinter import (
     Text,
     Frame,
@@ -16,6 +15,8 @@ from project_explorer.data.project import (
     LATEST_PROJECT_SUMMARY_VERSION,
 )
 
+from project_explorer.model.signal import Cause
+from project_explorer.model.projects import ProjectsModel
 
 from project_explorer.ui.attribute import Attribute
 
@@ -24,11 +25,14 @@ from project_explorer.ui.attribute import Attribute
 class ProjectData(Frame):
     """UI element showing project meta data"""
 
-    path: Path | None = None
+    because_user_saved: Cause
+    model: ProjectsModel | None = None
 
     @copy_method_params(Frame.__init__)
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+
+        self.because_user_saved = Cause(ProjectData, "the user saved")
 
         self.path_label = Label(self, text="")
         self.path_label.pack()
@@ -43,21 +47,36 @@ class ProjectData(Frame):
         self.desc_box = Text(self, wrap="word")
         self.desc_box.pack(fill="both", expand=True)
 
-    def load_project_data(self, path: Path | None) -> None:
+    def set_model(self, model: ProjectsModel | None) -> None:
+        """Sets the ui model for this widget"""
+        self.model = model
+        self._load_project()
+
+        if model is None:
+            return
+
+        model.project_selected.listen(lambda _: self._load_project())
+
+    def _load_project(self) -> None:
         """Load and display project meta data from a given project path"""
 
         self.desc_box.delete("1.0", "end")
-        self.path = path
         self.path_label.config(text="")
         self.name.set_value("")
         self.state.set_value("")
         self.tags.set_value("")
 
+        # pylint: disable=duplicate-code
+        if self.model is None:
+            return
+
+        path = self.model.get_project_under_edit()
+
         if path is None:
             return
 
-        description_path = path / "description.md"
         info_path = path / "project-info.json"
+        description_path = path / "description.md"
 
         info = ProjectSummary.model_validate_json(info_path.read_text(encoding="utf-8"))
 
@@ -71,10 +90,18 @@ class ProjectData(Frame):
                 description = file.read()
             self.desc_box.insert("end", description)
 
-    def get_save_data(self) -> Project:
+    def trigger_save(self) -> None:
         """Get the current data within the widget as SaveData"""
 
-        project = ProjectSummary(
+        if self.model is None:
+            return
+
+        path = self.model.get_project_under_edit()
+
+        if path is None:
+            return
+
+        project_summary = ProjectSummary(
             name=self.name.get_value(),
             state=self.state.get_value(),
             tags=list(
@@ -83,12 +110,11 @@ class ProjectData(Frame):
             version=LATEST_PROJECT_SUMMARY_VERSION,
         )
 
-        return Project(
-            description=self.desc_box.get("1.0", "end-1c"), project_summary=project
+        project = Project(
+            description=self.desc_box.get("1.0", "end-1c"),
+            project_summary=project_summary,
         )
         # pylint: disable=line-too-long
         # -1c : https://stackoverflow.com/questions/14824163/how-to-get-the-input-from-the-tkinter-text-widget
 
-    def get_path(self) -> None | Path:
-        """Return the path of the current project being viewed"""
-        return self.path
+        self.model.save_project(path, project, self.because_user_saved)
