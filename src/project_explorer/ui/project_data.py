@@ -1,11 +1,14 @@
 """UI code for showing project summary data"""
 
+from typing import Any
 from pathlib import Path
 from tkinter import (
     Text,
     Frame,
     Label,
 )
+
+from project_explorer.utility.typing import copy_method_params
 
 from project_explorer.data.project import (
     ProjectSummary,
@@ -18,33 +21,34 @@ from project_explorer.ui.attribute import Attribute
 
 
 # pylint: disable=too-many-instance-attributes
-class ProjectData:
+class ProjectData(Frame):
     """UI element showing project meta data"""
 
-    def __init__(self, parent: Frame) -> None:
-        self.parent = parent
+    path: Path | None = None
 
-        self.frame = Frame(parent)
-        self.frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+    @copy_method_params(Frame.__init__)
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
 
-        self.path = Label(self.frame, text="")
-        self.path.pack()
+        self.path_label = Label(self, text="")
+        self.path_label.pack()
 
-        self.name = Attribute(self.frame, "Name")
-        self.state = Attribute(self.frame, "State")
-        self.tags = Attribute(self.frame, "Tags")
+        self.name = Attribute(self, "Name")
+        self.state = Attribute(self, "State")
+        self.tags = Attribute(self, "Tags")
 
-        self.label = Label(self.frame, text="Description:")
+        self.label = Label(self, text="Description:")
         self.label.pack(anchor="w")
 
-        self.desc_box = Text(self.frame, wrap="word")
+        self.desc_box = Text(self, wrap="word")
         self.desc_box.pack(fill="both", expand=True)
 
     def load_project_data(self, path: Path | None) -> None:
         """Load and display project meta data from a given project path"""
 
         self.desc_box.delete("1.0", "end")
-        self.path.config(text="")
+        self.path = path
+        self.path_label.config(text="")
         self.name.set_value("")
         self.state.set_value("")
         self.tags.set_value("")
@@ -57,7 +61,7 @@ class ProjectData:
 
         info = ProjectSummary.model_validate_json(info_path.read_text(encoding="utf-8"))
 
-        self.path.config(text=path.as_posix())
+        self.path_label.config(text=path.as_posix())
         self.name.set_value(info.name)
         self.state.set_value(info.state)
         self.tags.set_value(", ".join(info.tags))
@@ -84,3 +88,7 @@ class ProjectData:
         )
         # pylint: disable=line-too-long
         # -1c : https://stackoverflow.com/questions/14824163/how-to-get-the-input-from-the-tkinter-text-widget
+
+    def get_path(self) -> None | Path:
+        """Return the path of the current project being viewed"""
+        return self.path

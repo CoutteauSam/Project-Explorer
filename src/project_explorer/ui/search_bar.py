@@ -9,32 +9,30 @@ from tkinter import (
     Button,
 )
 
+from project_explorer.utility.typing import copy_method_params
+
 from project_explorer.data.query import Query, parse_query, InvalidQuery
 
 
 # pylint: disable=too-few-public-methods
-class SearchBar:
+class SearchBar(Frame):
     """UI element which allows the user to specify a search query"""
 
-    def __init__(self, parent: Frame) -> None:
-        self.parent = parent
-
-        self.frame = Frame(self.parent)
-        self.frame.pack(fill="x", expand=True)
+    @copy_method_params(Frame.__init__)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         self.callbacks: list[Callable[[Query | None, bool], Any]] = []
 
-        self.search_var = Entry(self.frame)
-        self.search_var.pack(side="left", expand=True, fill="x", padx=5, pady=5)
+        self.search_var = Entry(self)
+        self.search_var.pack(side="left", expand=True, fill="x")
         self.search_var.bind("<Return>", self._trigger_search)
 
-        self.search_button = Button(
-            self.frame, text="Search", command=self._trigger_search
-        )
+        self.search_button = Button(self, text="Search", command=self._trigger_search)
         self.search_button.pack(side="left")
 
         self.refresh_button = Button(
-            self.frame, text="Refresh", command=self._trigger_refresh
+            self, text="Refresh", command=self._trigger_refresh
         )
         self.refresh_button.pack(side="left")
 

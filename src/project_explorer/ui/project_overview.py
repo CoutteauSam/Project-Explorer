@@ -10,6 +10,7 @@ from tkinter import (
 
 from pydantic import ValidationError
 
+from project_explorer.utility.typing import copy_method_params
 
 from project_explorer.data.project import ProjectSummary
 from project_explorer.data.query import Query
@@ -17,31 +18,30 @@ from project_explorer.data.query import Query
 from project_explorer.ui.search_bar import SearchBar
 
 
-class ProjectOverview:
+class ProjectOverview(Frame):
     """UI element which gives an overview of the available projects"""
 
     path: Path | None = None
     projects: dict[Path, ProjectSummary] = {}
 
-    def __init__(self, parent: Frame) -> None:
-        self.parent = parent
-
-        self.frame = Frame(parent)
-        self.frame.pack(fill="x")
+    @copy_method_params(Frame.__init__)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         self.callbacks: list[Callable[[Path | None], Any]] = []
         self.query: Query | None = None
 
-        self.search_bar = SearchBar(self.frame)
+        self.search_bar = SearchBar(self)
         self.search_bar.on_action_required(self._search_update)
+        self.search_bar.pack(fill="x")
 
         self.tree = ttk.Treeview(
-            self.frame,
+            self,
             columns=("id", "name", "state", "tags"),
             show="headings",
             selectmode="browse",
         )
-        self.tree.pack(fill="x", padx=5)
+        self.tree.pack(fill="both", expand=True)
         self.tree.heading("id", text="Path on Disk")
         self.tree.heading("name", text="Name")
         self.tree.heading("state", text="State")

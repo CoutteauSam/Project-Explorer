@@ -21,7 +21,9 @@ from project_explorer.data.project import (
 )
 
 from project_explorer.ui.project_overview import ProjectOverview
-from project_explorer.ui.preview import Preview
+from project_explorer.ui.project_data import ProjectData
+from project_explorer.ui.thumbnails import Thumbnails
+from project_explorer.ui.statistics import Statistics
 
 
 # pylint: disable=too-many-instance-attributes, too-few-public-methods
@@ -49,11 +51,22 @@ class ProjectExplorerTk:
         main_frame = Frame(self.application)
         main_frame.pack(fill="both", expand=True)
 
+        main_frame.grid_columnconfigure(1, weight=2)
+        main_frame.grid_columnconfigure(0, weight=5)
+
+        main_frame.grid_rowconfigure(0, weight=2)
+        main_frame.grid_rowconfigure(1, weight=0)
+        main_frame.grid_rowconfigure(2, weight=3)
+
         self.project_view = ProjectOverview(main_frame)
+        self.project_view.grid(row=0, column=0, sticky="NSEW")
         self.project_view.on_project_selected(self._on_select_project)
 
+        self.statistics = Statistics(main_frame)
+        self.statistics.grid(row=0, column=1, sticky="NSEW")
+
         self.button_bar = Frame(main_frame)
-        self.button_bar.pack(fill="x")
+        self.button_bar.grid(row=1, column=0, columnspan=2, sticky="NSEW")
 
         self.save_button = Button(self.button_bar, text="Save", command=self._save)
         self.save_button.pack(side="left")
@@ -64,7 +77,14 @@ class ProjectExplorerTk:
         self.new_button = Button(self.button_bar, text="New", command=self._new)
         self.new_button.pack(side="left")
 
-        self.preview = Preview(main_frame)
+        # self.preview = Preview(main_frame)
+        # self.preview.grid(row=2, column=0, columnspan=2)
+
+        self.project_data = ProjectData(main_frame)
+        self.project_data.grid(row=2, column=0, sticky="NSEW")
+
+        self.thumbnails = Thumbnails(main_frame)
+        self.thumbnails.grid(row=2, column=1, sticky="NSEW")
 
     def _setup_menu(self) -> None:
         menubar = Menu(self.application)
@@ -85,15 +105,16 @@ class ProjectExplorerTk:
             self.current_folder = None
 
     def _on_select_project(self, path: Path | None) -> None:
-        self.preview.load_project(path)
+        self.project_data.load_project_data(path)
+        self.thumbnails.load_thumbnails(path)
 
     def _save(self, *_: Any) -> None:
-        path = self.preview.get_path()
+        path = self.project_data.get_path()
 
         if path is None:
             return
 
-        data = self.preview.get_save_data()
+        data = self.project_data.get_save_data()
 
         self._save_specific(path, data)
 
@@ -132,11 +153,12 @@ class ProjectExplorerTk:
 
         (path / "thumbnails").mkdir(exist_ok=True)
 
-        self.preview.load_project(path)
+        self.project_data.load_project_data(path)
+        self.thumbnails.load_thumbnails(path)
         self.project_view.update_project(path, data.project_summary)
 
     def _open(self) -> None:
-        path = self.preview.get_path()
+        path = self.project_data.get_path()
 
         if path is None:
             return

@@ -7,30 +7,31 @@ from tkinter import (
     Frame,
     Label,
 )
+from typing import Any
 
 from PIL import Image, ImageTk
 
+from project_explorer.utility.typing import copy_method_params
+
 
 # pylint: disable=too-few-public-methods
-class Thumbnails:
+class Thumbnails(Frame):
     """UI element displaying the thumbnails of a project"""
 
-    def __init__(self, parent: Frame) -> None:
-        self.parent = parent
-
-        self.frame = Frame(parent)
-        self.frame.pack(side="right", fill="y", padx=5, pady=5)
+    @copy_method_params(Frame.__init__)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         self.images: list[ImageTk.PhotoImage] = []
 
-        self.label = Label(self.frame, text="Thumbnails:")
+        self.label = Label(self, text="Thumbnails:")
         self.label.pack(anchor="w")
 
-        self.thumb_canvas = Canvas(self.frame, width=300)
+        self.thumb_canvas = Canvas(self, width=300)
         self.thumb_canvas.pack(side="left", fill="y")
 
         self.scrollbar = Scrollbar(
-            self.frame, orient="vertical", command=self.thumb_canvas.yview
+            self, orient="vertical", command=self.thumb_canvas.yview
         )
         self.scrollbar.pack(side="right", fill="y")
 
