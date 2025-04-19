@@ -109,9 +109,8 @@ class ProjectExplorerTk:
 
     def _choose_folder(self) -> None:
         folder = filedialog.askdirectory()
-        self.model.load_projects_from_path(
-            Path(folder) if folder else None, self.because_open_folder
-        )
+        if folder:
+            self.model.load_projects_from_path(Path(folder), self.because_open_folder)
 
     def _new(self) -> None:
         path = self.model.get_path()
@@ -120,9 +119,7 @@ class ProjectExplorerTk:
             # TODO: communicate this to the user
             return
 
-        answer = simpledialog.askstring(
-            "Location", prompt="In what subfolder should the project be placed?"
-        )
+        answer = simpledialog.askstring("Project ID", prompt="project id")
 
         if answer is None:
             return
@@ -132,7 +129,7 @@ class ProjectExplorerTk:
             return
 
         self.model.save_project(
-            path / answer,
+            (path / answer).with_suffix(".project"),
             Project(
                 project_summary=ProjectSummary(
                     name="new project", state="new", tags=[]
@@ -143,7 +140,7 @@ class ProjectExplorerTk:
         )
 
     def _open(self) -> None:
-        path = self.model.get_path()
+        path = self.model.get_project_under_edit()
 
         if path is None:
             # TODO: communicate this to the user

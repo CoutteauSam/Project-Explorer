@@ -9,6 +9,8 @@ from collections import Counter
 
 from project_explorer.utility.typing import copy_method_params
 
+from project_explorer.data.project import ProjectSummary
+
 from project_explorer.model.projects import ProjectsModel
 
 
@@ -58,9 +60,12 @@ class Statistics(Frame):
         states: Counter[str] = Counter()
         tags: Counter[str] = Counter()
 
-        for data in projects.values():
-            states[data.state] += 1
-            tags.update(data.tags)
+        for project_node in projects.index.values():
+            if not isinstance(project_node.project, ProjectSummary):
+                continue
+
+            states[project_node.project.state] += 1
+            tags.update(project_node.project.tags)
 
         self.label.configure(state="normal")
         self.label.insert("end", f"states:\n{show_counter(states)}\n\n")

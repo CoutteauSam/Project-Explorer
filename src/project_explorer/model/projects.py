@@ -9,11 +9,149 @@ from project_explorer.data.project import ProjectSummary, Project
 from project_explorer.model.signal import Signal, Cause
 
 
+class InvalidProject:
+    """A project which could not be loaded"""
+
+
+class Root:
+    """A root project group"""
+
+
+class ProjectNode:
+    """A node within a project tree"""
+
+    path: Path
+    project: ProjectSummary | InvalidProject | Root
+
+    children: list["ProjectNode"]
+    parent: "ProjectNode | None"
+
+    def __init__(
+        self,
+        path: Path,
+        project: ProjectSummary | InvalidProject | Root,
+        parent: "ProjectNode | None" = None,
+    ):
+        self.path = path
+        self.project = project
+        self.children = []
+        self.parent = parent
+
+        if parent is not None:
+            parent.children.append(self)
+
+
+def _load_project(path: Path) -> ProjectSummary | InvalidProject:
+    info_path = path / "project-info.json"
+
+    if not info_path.exists() or not info_path.is_file():
+        return InvalidProject()
+
+    try:
+        project = ProjectSummary.model_validate_json(
+            info_path.read_text(encoding="utf-8")
+        )
+    except (ValidationError, OSError):
+        return InvalidProject()
+
+    return project
+
+
+class ProjectRepository:
+    """Stores loaded projects in an easy to access structure"""
+
+    index: dict[Path, ProjectNode]
+
+    root_nodes: dict[Path, ProjectNode]
+
+    def __init__(self) -> None:
+        self.index = {}
+        self.root_nodes = {}
+
+    def unload_node(self, path: Path) -> None:
+        """Remove a node from the repository"""
+
+        if path not in self.index:
+            return
+
+        for subnode in self.index[path].children:
+            self.unload_node(subnode.path)
+
+        node = self.index.pop(path)
+
+        if node.parent is not None:
+            node.parent.children.remove(node)
+
+    def load_root(self, path: Path) -> None:
+        """Load a new root project node"""
+
+        if path in self.index and path not in self.root_nodes:
+            raise ValueError("Adding root which is a sub item of another root")
+
+        self.unload_node(path)
+
+        self.index[path] = self.root_nodes[path] = ProjectNode(path, Root())
+
+        todo_list: list[None | Path] = [None]
+
+        while todo_list:
+            parent = todo_list.pop()
+            directory = parent if parent is not None else path
+
+            for sub_directory in directory.iterdir():
+                if not sub_directory.is_dir():
+                    continue
+
+                if sub_directory.suffix != ".project":
+                    continue
+
+                project = _load_project(sub_directory)
+
+                self.index[sub_directory] = ProjectNode(
+                    sub_directory, project, parent=self.index[directory]
+                )
+                todo_list.append(sub_directory)
+
+    def update_project(
+        self,
+        path: Path,
+        project: ProjectSummary | InvalidProject,
+    ) -> None:
+        """Update an existing project"""
+
+        if path not in self.index:
+            raise ValueError("unknown node")
+
+        node = self.index[path]
+
+        node.project = project
+
+    def add_new_project(
+        self, path: Path, project: ProjectSummary | InvalidProject, parent: Path
+    ) -> None:
+        """Add a new project to the repository"""
+
+        if path in self.index:
+            raise ValueError("node already exists")
+
+        if parent not in self.index:
+            raise ValueError("unknown parent")
+
+        self.index[path] = ProjectNode(path, project, parent=self.index[parent])
+
+    def get_project(self, path: Path) -> ProjectSummary | InvalidProject | Root | None:
+        """Get a project from the repository"""
+
+        if path in self.index:
+            return self.index[path].project
+        return None
+
+
 class ProjectsModel:
     """Stores the current gui state"""
 
     _projects_root_path: Path | None = None
-    _projects: dict[Path, ProjectSummary] | None = None
+    _projects: ProjectRepository
     _project_under_edit: Path | None = None
 
     projects_loaded: Signal
@@ -24,12 +162,13 @@ class ProjectsModel:
         self.projects_loaded = Signal()
         self.project_updated = Signal()
         self.project_selected = Signal()
+        self._projects = ProjectRepository()
 
     def get_path(self) -> Path | None:
         """Get the current projects root path"""
         return self._projects_root_path
 
-    def get_loaded_projects(self) -> dict[Path, ProjectSummary] | None:
+    def get_loaded_projects(self) -> ProjectRepository | None:
         """Get the projects loaded from the projects root path"""
         return self._projects
 
@@ -37,61 +176,12 @@ class ProjectsModel:
         """Get the project path of the project currently being edited"""
         return self._project_under_edit
 
-    def _set_new_projects(
-        self,
-        path: Path | None,
-        projects: dict[Path, ProjectSummary] | None,
-        cause: Cause,
-    ) -> None:
-        self._projects_root_path = path
-        self._projects = projects
-
-        self.projects_loaded.notify(cause)
-
-        if (
-            self._project_under_edit is not None
-            and self._projects is not None
-            and self._project_under_edit not in self._projects
-        ):
-            self._set_project_under_edit(None, cause)
-
-    def _load_project(self, path: Path) -> ProjectSummary | None:
-        info_path = path / "project-info.json"
-
-        if not info_path.exists() or not info_path.is_file():
-            return None
-
-        try:
-            project = ProjectSummary.model_validate_json(
-                info_path.read_text(encoding="utf-8")
-            )
-        except (ValidationError, OSError):
-            return None
-
-        return project
-
-    def load_projects_from_path(self, path: Path | None, cause: Cause) -> None:
+    def load_projects_from_path(self, path: Path, cause: Cause) -> None:
         """Load or reload project from a given root path"""
 
-        if path is None:
-            self._set_new_projects(None, None, cause)
-            return
+        self._projects.load_root(path)
 
-        projects = {}
-
-        for sub_directory in path.iterdir():
-            if not sub_directory.is_dir():
-                continue
-
-            project = self._load_project(sub_directory)
-
-            if project is None:
-                # TODO: communicate this to the user
-                continue
-
-            projects[sub_directory] = project
-
-        self._set_new_projects(path, projects, cause)
+        self.projects_loaded.notify(cause)
 
     def _set_project_under_edit(self, path: Path | None, cause: Cause) -> None:
         self._project_under_edit = path
@@ -104,17 +194,25 @@ class ProjectsModel:
         if path is None:
             self._set_project_under_edit(None, cause)
 
-        if self._projects is None or path not in self._projects:
+        if path is not None and (
+            self._projects is None or self._projects.get_project(path) is None
+        ):
             # TODO: communicate this to the user
             return
 
         self._set_project_under_edit(path, cause)
 
-    def _set_project(self, path: Path, project: ProjectSummary, cause: Cause) -> None:
+    def _set_project(
+        self, path: Path, project: ProjectSummary | InvalidProject, cause: Cause
+    ) -> None:
         if self._projects is None:
             return
 
-        self._projects[path] = project
+        if path in self._projects.index:
+            self._projects.update_project(path, project)
+        else:
+            self._projects.add_new_project(path, project, path.parent)
+
         self.project_updated.notify(cause)
 
     def load_project(self, path: Path, cause: Cause) -> None:
@@ -124,11 +222,7 @@ class ProjectsModel:
             # TODO: communicate this to the user
             return
 
-        project = self._load_project(path)
-
-        if project is None:
-            # TODO: communicate this to the user
-            return
+        project = _load_project(path)
 
         self._set_project(path, project, cause)
 

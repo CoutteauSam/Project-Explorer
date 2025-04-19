@@ -78,9 +78,15 @@ class ProjectData(Frame):
         info_path = path / "project-info.json"
         description_path = path / "description.md"
 
-        info = ProjectSummary.model_validate_json(info_path.read_text(encoding="utf-8"))
-
         self.path_label.config(text=path.as_posix())
+
+        try:
+            info = ProjectSummary.model_validate_json(
+                info_path.read_text(encoding="utf-8")
+            )
+        except FileNotFoundError:
+            return
+
         self.name.set_value(info.name)
         self.state.set_value(info.state)
         self.tags.set_value(", ".join(info.tags))
