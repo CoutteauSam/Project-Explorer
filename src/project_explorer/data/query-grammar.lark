@@ -9,8 +9,13 @@ and_base_expression: "(" or_expression ")"
 
 or_expression: or_base_expression ( "OR" or_base_expression )*
 
-or_base_expression: ID ":" LITERAL
-                  | ID ":" INVERT LITERAL
+or_base_expression: hard_query | soft_query
+
+hard_query: ID ":" LITERAL
+            | ID ":" INVERT LITERAL
+
+soft_query: ID "~" LITERAL
+            | ID "~" INVERT LITERAL
 
 ID: /[-_a-zA-Z]+/
 LITERAL: /[^ ,:()\-]+/

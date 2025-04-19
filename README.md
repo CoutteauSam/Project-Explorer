@@ -30,6 +30,7 @@ Within the search, you query as follows
 
 * Directly, `state:draft` (state==draft) or `tags:art` (has tag art)
   which can be prefixed with `-` to negate the query (`tags:-art`)
+  * Both `id:value` (exact match) and `id~value` (fuzzy match) can be used
 * An OR of direct queries `state:-draft OR tags:art`
 * An AND of OR and Direct queries `state:-draft AND (tags:art or tags:-complex)`
 
