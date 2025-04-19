@@ -143,7 +143,7 @@ class ProjectExplorerTk:
         )
 
     def _open(self) -> None:
-        path = self.model.get_path()
+        path = self.model.get_project_under_edit()
 
         if path is None:
             # TODO: communicate this to the user
