@@ -2,9 +2,11 @@
 
 from pathlib import Path
 from typing import TypeAlias
+import math
 
 from lark import Lark, Transformer, UnexpectedInput, Token
 from pydantic import BaseModel
+import regex
 
 grammar_file = Path(__file__).parent / "query-grammar.lark"
 
@@ -13,7 +15,7 @@ with open(grammar_file, "r", encoding="utf-8") as file:
 
 
 class QueryLiteral(BaseModel):
-    """A primitive query condition"""
+    """Query literal base class"""
 
     id: str
     value: str
@@ -28,9 +30,29 @@ class QueryLiteral(BaseModel):
         value = context[self.id]
 
         if isinstance(value, list):
-            return (self.value in value) ^ self.inverted
+            return any(self._match(v) ^ self.inverted for v in value)
 
-        return (str(value) == self.value) ^ self.inverted
+        return self._match(str(value)) ^ self.inverted
+
+    def _match(self, _string: str) -> bool:
+        """Check if a specific string matches the query"""
+        return False
+
+
+class HardQueryLiteral(QueryLiteral):
+    """A primitive exact query condition"""
+
+    def _match(self, string: str) -> bool:
+        return self.value == string
+
+
+class SoftQueryLiteral(QueryLiteral):
+    """A primitive fuzzy query condition"""
+
+    def _match(self, string: str) -> bool:
+        n = len(self.value)
+        count = max(min(math.ceil(n * 0.7), n - 1), 1)  # ~ 70% match
+        return bool(regex.search(f"({self.value}){{e<={n-count}}}", string))
 
 
 class QueryOr(BaseModel):
@@ -60,10 +82,20 @@ class _QueryTransformer(Transformer[Token, Query]):
     """Transforms a parse result into a query"""
 
     # pylint: disable=missing-function-docstring
-    def or_base_expression(
+    def hard_query(
         self, items: tuple[str, str] | tuple[str, str, str]
-    ) -> QueryLiteral:
-        return QueryLiteral(id=items[0], value=items[-1], inverted=len(items) == 3)
+    ) -> HardQueryLiteral:
+        return HardQueryLiteral(id=items[0], value=items[-1], inverted=len(items) == 3)
+
+    # pylint: disable=missing-function-docstring
+    def soft_query(
+        self, items: tuple[str, str] | tuple[str, str, str]
+    ) -> SoftQueryLiteral:
+        return SoftQueryLiteral(id=items[0], value=items[-1], inverted=len(items) == 3)
+
+    # pylint: disable=missing-function-docstring
+    def or_base_expression(self, items: tuple[QueryLiteral]) -> QueryLiteral:
+        return items[0]
 
     # pylint: disable=missing-function-docstring
     def and_base_expression(
