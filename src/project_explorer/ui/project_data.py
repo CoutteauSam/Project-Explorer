@@ -26,7 +26,7 @@ class ProjectData(Frame):
     """UI element showing project meta data"""
 
     because_user_saved: Cause
-    model: ProjectsModel | None = None
+    model: ProjectsModel
 
     @copy_method_params(Frame.__init__)
     def __init__(self, *args: Any, **kwargs: Any):
@@ -47,13 +47,19 @@ class ProjectData(Frame):
         self.desc_box = Text(self, wrap="word")
         self.desc_box.pack(fill="both", expand=True)
 
-    def set_model(self, model: ProjectsModel | None) -> None:
+        for source in [
+            self.name.input,
+            self.state.input,
+            self.tags.input,
+            self.desc_box,
+        ]:
+            for event in ["<Return>", "<FocusOut>"]:
+                source.bind(event, lambda *_: self._trigger_save())
+
+    def set_model(self, model: ProjectsModel) -> None:
         """Sets the ui model for this widget"""
         self.model = model
         self._load_project()
-
-        if model is None:
-            return
 
         model.project_selected.listen(lambda _: self._load_project())
 
@@ -65,10 +71,6 @@ class ProjectData(Frame):
         self.name.set_value("")
         self.state.set_value("")
         self.tags.set_value("")
-
-        # pylint: disable=duplicate-code
-        if self.model is None:
-            return
 
         path = self.model.get_project_under_edit()
 
@@ -96,11 +98,8 @@ class ProjectData(Frame):
                 description = file.read()
             self.desc_box.insert("end", description)
 
-    def trigger_save(self) -> None:
+    def _trigger_save(self) -> None:
         """Get the current data within the widget as SaveData"""
-
-        if self.model is None:
-            return
 
         path = self.model.get_project_under_edit()
 
@@ -123,4 +122,5 @@ class ProjectData(Frame):
         # pylint: disable=line-too-long
         # -1c : https://stackoverflow.com/questions/14824163/how-to-get-the-input-from-the-tkinter-text-widget
 
+        # TODO: check if modified
         self.model.save_project(path, project, self.because_user_saved)

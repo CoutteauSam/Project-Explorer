@@ -150,7 +150,6 @@ class ProjectRepository:
 class ProjectsModel:
     """Stores the current gui state"""
 
-    _projects_root_path: Path | None = None
     _projects: ProjectRepository
     _project_under_edit: Path | None = None
 
@@ -164,11 +163,7 @@ class ProjectsModel:
         self.project_selected = Signal()
         self._projects = ProjectRepository()
 
-    def get_path(self) -> Path | None:
-        """Get the current projects root path"""
-        return self._projects_root_path
-
-    def get_loaded_projects(self) -> ProjectRepository | None:
+    def get_loaded_projects(self) -> ProjectRepository:
         """Get the projects loaded from the projects root path"""
         return self._projects
 
