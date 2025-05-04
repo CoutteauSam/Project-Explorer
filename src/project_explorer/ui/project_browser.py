@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
     QFrame,
 )
 
+from project_explorer.data.project import Project
+
 from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard
 
@@ -28,16 +30,21 @@ class ProjectBrowser(QWidget):
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         scroll_content = QWidget()
         scroll_content.setContentsMargins(20, 0, 20, 0)
-        scroll_layout = FlowLayout(scroll_content)
-
-        # Add some dummy project cards
-        for i in range(5):
-            card = ProjectCard(
-                f"Project {i + 1}",
-                "dummy.png",  # You can replace this with a local image path
-                ["demo", "example", *["filler" for _ in range(100)]],
-            )
-            scroll_layout.addWidget(card)
+        self.scroll_layout = FlowLayout(scroll_content)
 
         scroll_area.setWidget(scroll_content)
         main_layout.addWidget(scroll_area)
+
+    def set_projects( self, projects: list[Project] )->None:
+        layout = self.scroll_layout
+
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        for project in projects:
+            card = ProjectCard()
+            card.set_project(project)
+            layout.addWidget(card)
+

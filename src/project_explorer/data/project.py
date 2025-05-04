@@ -1,4 +1,5 @@
 """Contains datastructures describing a project"""
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -19,6 +20,5 @@ class Project(BaseModel):
     A collection of all information related to a project,
     spread over multiple files on disk
     """
-
+    path: Path
     project_summary: ProjectSummary
-    description: str

@@ -1,4 +1,4 @@
-from pathlib import Path
+from typing import Any
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -10,18 +10,23 @@ from PySide6.QtWidgets import (
 )
 
 from PySide6.QtGui import QPixmap, QPalette
-from PySide6.QtCore import Qt, QPoint, Slot
+from PySide6.QtCore import Qt, QPoint, Slot, QSize
 
 from project_explorer.assets import dummy
+
+from project_explorer.utility.typing import copy_method_params
+
+from project_explorer.data.project import Project
 
 from project_explorer.ui.project_navigation_bar import ProjectNavigationBar
 from project_explorer.ui.project_tag_list import ProjectTagList
 
 class ProjectCard(QWidget):
-    def __init__(self, name: str, project_path: Path, tags: list[str]):
-        super().__init__()
+
+    @copy_method_params(QWidget.__init__)
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
         self.setFixedSize(200, 200)
-        self.tags = tags
 
         pal = QPalette()
         pal.setColor(QPalette.ColorRole.Window, "#555555")
@@ -40,7 +45,7 @@ class ProjectCard(QWidget):
         )
         self.bg.setGeometry(0, 0, 200, 200)
         self.bg.lower()
-        self.bg.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.bg.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Overlay layout
         overlay = QVBoxLayout(self)
@@ -57,19 +62,18 @@ class ProjectCard(QWidget):
         overlay.addWidget(spacer)
 
         # Tags
-        tags_widget = ProjectTagList()
-        overlay.addWidget(tags_widget)
-        tags_widget.set_tags(tags)
+        self.tags_widget = ProjectTagList()
+        overlay.addWidget(self.tags_widget)
 
         # Project name
         pal = QPalette()
         pal.setColor(QPalette.ColorRole.Window, "#88555555")
-        name_label = QLabel(name)
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        name_label.setContentsMargins(4, 4, 4, 4)
-        name_label.setPalette(pal)
-        name_label.setAutoFillBackground(True)
-        overlay.addWidget(name_label)
+        self.name_label = QLabel("")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setContentsMargins(4, 4, 4, 4)
+        self.name_label.setPalette(pal)
+        self.name_label.setAutoFillBackground(True)
+        overlay.addWidget(self.name_label)
 
 
         self.popMenu = QMenu(self)
@@ -77,6 +81,21 @@ class ProjectCard(QWidget):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
+
+    def set_project( self, project :Project ):
+        self.name_label.setText( project.project_summary.name )
+        self.tags_widget.set_tags( project.project_summary.tags )
+
+        if (project.path / "thumbnails").is_dir():
+            for image in (project.path / "thumbnails").iterdir():
+                self.bg.setPixmap(
+                     QPixmap(image).scaled(
+                        200,200,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
+                break
 
     @Slot()
     def _open_context_menu(self, point:QPoint):
