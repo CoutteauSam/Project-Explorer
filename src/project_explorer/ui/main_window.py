@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from pydantic import ValidationError
 
@@ -22,10 +23,11 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QStatusBar,
     QFileDialog,
+    
 )
 
 from PySide6.QtGui import QPixmap, QEnterEvent, QPalette, QIcon, QAction
-from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize, QEvent, Slot
+from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize, QEvent, Slot, QSettings
 
 from project_explorer.data.project import ProjectSummary, Project
 
@@ -76,6 +78,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Project Explorer")
 
+        self.settings = QSettings("Project Explorer", "Project Explorer")
+
         self.browser = ProjectBrowser()
 
         self.setCentralWidget(self.browser)
@@ -88,9 +92,37 @@ class MainWindow(QMainWindow):
         file_menu = menu.addMenu("&File")
         file_menu.addAction(button_action)
 
+        self.recent_menu = QMenu("&Recently Opened", self)
+        file_menu.addMenu(self.recent_menu)
+        self._update_recent_menu()
+
+    def _update_recent_menu(self):
+        self.recent_menu.clear()
+        recent_dirs = self.settings.value("recent_dirs", [], type=list)
+        for path in recent_dirs:
+            action = QAction(path, self)
+            action.triggered.connect(lambda checked, p=path: self._load_vault(Path(p)))
+            self.recent_menu.addAction(action)
+
+    def _load_vault( self, path: Path):
+        self.browser.set_projects(load_projects_from_path(path))
+
+
     def _open_new_vault(self):
-        directory = Path(
+        directory = (
             QFileDialog.getExistingDirectory(self, "Select projects vault")
         )
 
-        self.browser.set_projects(load_projects_from_path(directory))
+        if not directory:
+            return
+        
+        recent_dirs = cast( list[str], self.settings.value("recent_dirs", [], type=list) )
+        
+        if len(recent_dirs) > 9:
+            recent_dirs.pop(-1)
+
+        recent_dirs.insert(0, directory)
+        self.settings.setValue("recent_dirs", recent_dirs)
+        self._update_recent_menu()
+
+        self._load_vault(Path(directory))
