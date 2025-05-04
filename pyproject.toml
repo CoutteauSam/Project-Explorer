@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [tool.setuptools.package-data]
-"project_explorer" = ["py.typed"]
+"project_explorer" = ["py.typed","assets/chevron_left.svg","assets/chevron_right.svg","assets/dummy.png","assets/open_in.svg","assets/terminal.svg"]
 
 [project.gui-scripts]
 project-explorer = "project_explorer:main"

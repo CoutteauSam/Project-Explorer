@@ -1,0 +1,75 @@
+from typing import Any
+
+from PySide6.QtWidgets import (
+    QWidget,
+    QLabel,
+    QScrollArea,
+    QFrame,
+    QSizePolicy,
+)
+
+from PySide6.QtGui import  QEnterEvent, QPalette
+from PySide6.QtCore import Qt, QEvent
+
+from project_explorer.utility.typing import copy_method_params
+
+from project_explorer.ui.flow_layout import FlowLayout
+
+class ProjectTagList(QScrollArea):
+    @copy_method_params(QScrollArea.__init__)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        # Tag scroll area
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._collapse()
+
+        self.setWidgetResizable(True)
+        pal = QPalette()
+        pal.setColor(QPalette.ColorRole.Window, "#00000000")
+        self.setPalette(pal)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+
+        # Tag container
+        self.tag_container = QWidget()
+        self.tag_container.setPalette(pal)
+        self.tag_layout = FlowLayout(self.tag_container)
+        self.tag_layout.setContentsMargins(5, 0, 5, 0)
+        self.tag_layout.setSpacing(4)
+
+        self.setWidget(self.tag_container)
+
+    def set_tags(self, tags: list[str]) -> None:
+        layout = self.tag_layout
+
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        for tag in tags:
+            label = QLabel(tag)
+            label.setStyleSheet(
+                "background-color: pink; padding: 2px 6px; border-radius: 10px;"
+            )
+            self.tag_layout.addWidget(label)
+
+    def enterEvent(self, event: QEnterEvent) -> None:
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.verticalScrollBar().setEnabled(True)
+        self.setMaximumHeight(200)
+        return super().enterEvent(event)
+
+    def _collapse(self) -> None:
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.verticalScrollBar().setEnabled(False)
+        self.setMaximumHeight(24)
+        self.verticalScrollBar().setValue(0)
+
+    def leaveEvent(self, event: QEvent) -> None:
+        self._collapse()
+        return super().leaveEvent(event)
+
+
