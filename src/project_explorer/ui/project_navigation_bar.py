@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QPushButton,
+    QSizePolicy
 )
 
 from PySide6.QtGui import QPixmap, QPalette, QIcon
@@ -36,13 +37,21 @@ class ProjectNavigationBar(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        previous_button = self._add_button(chevron_left)
-        open_in_button = self._add_button(open_in)
-        terminal_button = self._add_button(terminal)
-        next_button = self._add_button(chevron_right)
+        self.previous_button = self._add_button(chevron_left)
+        self.open_in_button = self._add_button(open_in)
+        self.terminal_button = self._add_button(terminal)
+        self.next_button = self._add_button(chevron_right)
 
-        for button in [previous_button, open_in_button, terminal_button, next_button]:
+        for button in [self.previous_button, self.open_in_button, self.terminal_button, self.next_button]:
             layout.addWidget(button)
+
+        policy = QSizePolicy()
+        policy.setRetainSizeWhenHidden(True)
+
+        self.previous_button.setSizePolicy(policy)
+        self.previous_button.setVisible(False)
+        self.next_button.setSizePolicy(policy)
+        self.next_button.setVisible(False)
 
     def _add_button(self, icon_path: str) -> QPushButton:
         button = QPushButton()

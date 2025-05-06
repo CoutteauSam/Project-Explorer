@@ -10,12 +10,15 @@ from project_explorer.data.project import Project
 
 from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard
+from project_explorer.ui.image_loader import ImageLoader
 
 class ProjectBrowser(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Project Browser")
         self.setGeometry(100, 100, 900, 400)
+
+        self.image_loader = ImageLoader()
 
         main_layout = QVBoxLayout(self)
 
@@ -45,6 +48,6 @@ class ProjectBrowser(QWidget):
 
         for project in projects:
             card = ProjectCard()
-            card.set_project(project)
+            card.set_project(self.image_loader, project)
             layout.addWidget(card)
 

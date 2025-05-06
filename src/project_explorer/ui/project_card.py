@@ -1,16 +1,9 @@
-from typing import Any
+from typing import Any, cast
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QSizePolicy,
-    QMenu,
-    QDialog
-)
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog
 
 from PySide6.QtGui import QPixmap, QPalette
-from PySide6.QtCore import Qt, QPoint, Slot, QSize
+from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent
 
 from project_explorer.assets import dummy
 
@@ -20,8 +13,12 @@ from project_explorer.data.project import Project
 
 from project_explorer.ui.project_navigation_bar import ProjectNavigationBar
 from project_explorer.ui.project_tag_list import ProjectTagList
+from project_explorer.ui.image_loader import ImageLoadedEvent, ImageLoader
+
 
 class ProjectCard(QWidget):
+
+    place_holder_image: QPixmap | None = None
 
     @copy_method_params(QWidget.__init__)
     def __init__(self, *args: Any, **kwargs: Any):
@@ -33,15 +30,18 @@ class ProjectCard(QWidget):
         self.setPalette(pal)
         self.setAutoFillBackground(True)
 
-        # Background image
-        self.bg = QLabel(self)
-        self.bg.setPixmap(
-            QPixmap(dummy).scaled(
+        if ProjectCard.place_holder_image is None:
+            ProjectCard.place_holder_image = QPixmap(dummy).scaled(
                 200,
                 200,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
+
+        # Background image
+        self.bg = QLabel(self)
+        self.bg.setPixmap(
+            ProjectCard.place_holder_image
         )
         self.bg.setGeometry(0, 0, 200, 200)
         self.bg.lower()
@@ -53,8 +53,8 @@ class ProjectCard(QWidget):
         overlay.setSpacing(2)
 
         # Navigation
-        nav_bar = ProjectNavigationBar()
-        overlay.addWidget(nav_bar)
+        self.nav_bar = ProjectNavigationBar()
+        overlay.addWidget(self.nav_bar)
 
         # Spacer
         spacer = QWidget()
@@ -75,33 +75,50 @@ class ProjectCard(QWidget):
         self.name_label.setAutoFillBackground(True)
         overlay.addWidget(self.name_label)
 
-
         self.popMenu = QMenu(self)
-        self.popMenu.addAction('Edit', self._edit_screen)
+        self.popMenu.addAction("Edit", self._edit_screen)
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
 
-    def set_project( self, project :Project ):
-        self.name_label.setText( project.project_summary.name )
-        self.tags_widget.set_tags( project.project_summary.tags )
+    def set_project(self, image_loader: ImageLoader, project: Project):
+        self.name_label.setText(project.project_summary.name)
+        self.tags_widget.set_tags(project.project_summary.tags)
 
         if (project.path / "thumbnails").is_dir():
             for image in (project.path / "thumbnails").iterdir():
-                self.bg.setPixmap(
-                     QPixmap(image).scaled(
-                        200,200,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                )
+                image_loader.load_image_for(self, image)
+
+                # self.bg.setPixmap(
+                #     QPixmap(image).scaled(
+                #        200,200,
+                #        Qt.AspectRatioMode.KeepAspectRatio,
+                #        Qt.TransformationMode.SmoothTransformation,
+                #    )
+                # )
                 break
 
+    def event(self, event: QEvent) -> bool:
+        if event.type() == ImageLoadedEvent.s_type:
+            image_loaded_event = cast(ImageLoadedEvent, event)
+
+            self.bg.setPixmap(
+                QPixmap.fromImage(image_loaded_event.image).scaled(
+                    200,
+                    200,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+            return True
+
+        return super().event(event)
+
     @Slot()
-    def _open_context_menu(self, point:QPoint):
+    def _open_context_menu(self, point: QPoint):
         self.popMenu.exec(self.mapToGlobal(point))
 
-    def _edit_screen(self)->None:
-        my_progress_dialog=QDialog( self )
-        my_progress_dialog.setModal( True )
+    def _edit_screen(self) -> None:
+        my_progress_dialog = QDialog(self)
+        my_progress_dialog.setModal(True)
         my_progress_dialog.show()
