@@ -37,6 +37,7 @@ class ProjectCard(QWidget):
 
     place_holder_image: QPixmap | None = None
     project : Project | None = None
+    image_loader: ImageLoader
 
     @copy_method_params(QWidget.__init__)
     def __init__(self, *args: Any, **kwargs: Any):
@@ -105,15 +106,20 @@ class ProjectCard(QWidget):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
 
-    def set_project(self, image_loader: ImageLoader, project: Project):
-        self.name_label.setText(project.project_summary.name)
-        self.tags_widget.set_tags(project.project_summary.tags)
-
+    def set_project(self, project: Project):
         self.project = project
+        self._update_project()
 
-        if (project.path / "thumbnails").is_dir():
-            for image in (project.path / "thumbnails").iterdir():
-                image_loader.load_image_for(self, image)
+    def set_image_loader(self, image_loader: ImageLoader):
+        self.image_loader = image_loader
+
+    def _update_project( self )->None:
+        self.name_label.setText(self.project.project_summary.name)
+        self.tags_widget.set_tags(self.project.project_summary.tags)
+
+        if (self.project.path / "thumbnails").is_dir():
+            for image in (self.project.path / "thumbnails").iterdir():
+                self.image_loader.load_image_for(self, image)
 
     def event(self, event: QEvent) -> bool:
         if event.type() == ImageLoadedEvent.s_type:
@@ -169,15 +175,29 @@ class ProjectCard(QWidget):
 
         save = QPushButton()
         save.setText("&Save")
+        save.clicked.connect(lambda: (self._save_project(name.text(),tags.toPlainText()),my_progress_dialog.close()))
         additional_layout.addWidget(save)
 
         cancel = QPushButton()
         cancel.setText("&Cancel")
+        cancel.clicked.connect( lambda: my_progress_dialog.close() )
         additional_layout.addWidget(cancel)
 
         layout.addLayout(additional_layout,2,0,1,2)
 
         my_progress_dialog.show()
+
+    def _save_project(self, name:str, tags:str) -> None:
+        if self.project is None:
+            return
+
+        self.project.project_summary.name = name
+        self.project.project_summary.tags = list(set(tag.strip() for tag in tags.split(",") if tag.strip()))
+
+        with open(self.project.path / "project-info.json", "w", encoding="utf-8") as file:
+            file.write(self.project.project_summary.model_dump_json())
+
+        self._update_project()
 
     def _open_in_explorer(self) -> None:
 

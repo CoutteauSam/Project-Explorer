@@ -48,6 +48,7 @@ class ProjectBrowser(QWidget):
 
         for project in projects:
             card = ProjectCard()
-            card.set_project(self.image_loader, project)
+            card.set_image_loader(self.image_loader)
+            card.set_project(project)
             layout.addWidget(card)
 
