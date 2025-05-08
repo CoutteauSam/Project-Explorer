@@ -2,6 +2,7 @@ from typing import Any, cast
 import subprocess
 import os
 import platform
+from pathlib import Path
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog, QGridLayout, QLineEdit, QTextEdit, QHBoxLayout, QPushButton
 
@@ -18,6 +19,18 @@ from project_explorer.ui.project_navigation_bar import ProjectNavigationBar
 from project_explorer.ui.project_tag_list import ProjectTagList
 from project_explorer.ui.image_loader import ImageLoadedEvent, ImageLoader
 from project_explorer.ui.multi_image import MultiImage
+
+def open_path_in_explorer( path: Path ):
+
+    if not path.exists():
+        return
+
+    if os.name in ["nt", "ce"]:
+        os.startfile(os.path.normpath(path))
+    elif "darwin" in platform.system().casefold():
+        subprocess.run(["open", str(path)], check=True)
+    else:  # assume Linux or other POSIX-like
+        subprocess.run(["xdg-open", str(path)], check=True)
 
 
 class ProjectCard(QWidget):
@@ -133,7 +146,9 @@ class ProjectCard(QWidget):
         layout = QGridLayout(my_progress_dialog)
 
         name = QLineEdit()
+        name.setText( self.project.project_summary.name )
         tags = QTextEdit()
+        tags.setText( ", ".join( self.project.project_summary.tags ) )
 
         layout.addWidget(QLabel("Name:"),0,0)
         layout.addWidget(QLabel("Tags:"),1,0)
@@ -142,8 +157,14 @@ class ProjectCard(QWidget):
 
         additional_layout = QHBoxLayout()
 
+        def create_and_open():
+            path = self.project.path / "thumbnails"
+            path.mkdir(exist_ok=True)
+            open_path_in_explorer(path)
+
         show_thumbnail = QPushButton()
         show_thumbnail.setText("Open thumbnails folder")
+        show_thumbnail.clicked.connect( lambda: create_and_open() )
         additional_layout.addWidget(show_thumbnail)
 
         save = QPushButton()
@@ -154,10 +175,7 @@ class ProjectCard(QWidget):
         cancel.setText("&Cancel")
         additional_layout.addWidget(cancel)
 
-        additional_layout
-
         layout.addLayout(additional_layout,2,0,1,2)
-
 
         my_progress_dialog.show()
 
@@ -166,11 +184,4 @@ class ProjectCard(QWidget):
         if self.project is None:
             return
 
-        path = self.project.path
-
-        if os.name in ["nt", "ce"]:
-            os.startfile(os.path.normpath(path))
-        elif "darwin" in platform.system().casefold():
-            subprocess.run(["open", str(path)], check=True)
-        else:  # assume Linux or other POSIX-like
-            subprocess.run(["xdg-open", str(path)], check=True)
+        open_path_in_explorer( self.project.path )
