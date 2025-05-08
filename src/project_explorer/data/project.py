@@ -11,7 +11,6 @@ class ProjectSummary(BaseModel):
 
     version: int = 0
     name: str
-    state: str
     tags: list[str]
 
 

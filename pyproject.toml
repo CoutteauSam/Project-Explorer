@@ -9,7 +9,8 @@ dependencies = [
     "pillow",
     'pydantic',
     "lark",
-    "regex"
+    "regex",
+    "PySide6"
 ]
 
 [tool.setuptools.package-data]

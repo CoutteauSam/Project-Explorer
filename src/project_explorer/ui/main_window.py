@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import cast
 
-from pydantic import ValidationError
-
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -29,48 +27,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QPixmap, QEnterEvent, QPalette, QIcon, QAction, QCloseEvent
 from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize, QEvent, Slot, QSettings, QByteArray
 
-from project_explorer.data.project import ProjectSummary, Project
-
 from project_explorer.ui.project_browser import ProjectBrowser
 
 
-def load_project( path: Path) -> ProjectSummary | None:
-    info_path = path / "project-info.json"
-
-    if not info_path.exists() or not info_path.is_file():
-        return None
-
-    try:
-        project = ProjectSummary.model_validate_json(
-            info_path.read_text(encoding="utf-8")
-        )
-    except (ValidationError, OSError):
-        return None
-
-    return project
-
-
-def load_projects_from_path(path: Path) -> list[Project]:
-    """Load or reload project from a given root path"""
-
-    projects = []
-
-    for sub_directory in path.iterdir():
-        if not sub_directory.is_dir():
-            continue
-
-        if sub_directory.suffix != ".project":
-            continue
-
-        project = load_project(sub_directory)
-
-        if project is None:
-            # TODO: communicate this to the user
-            continue
-
-        projects.append(Project(path=sub_directory, project_summary=project))
-
-    return projects
 
 
 class MainWindow(QMainWindow):
@@ -107,7 +66,7 @@ class MainWindow(QMainWindow):
             self.recent_menu.addAction(action)
 
     def _load_vault( self, path: Path):
-        self.browser.set_projects(load_projects_from_path(path))
+        self.browser.set_projects_path(path)
 
 
     def _open_new_vault(self):
