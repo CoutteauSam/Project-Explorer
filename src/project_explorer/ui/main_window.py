@@ -26,8 +26,8 @@ from PySide6.QtWidgets import (
     
 )
 
-from PySide6.QtGui import QPixmap, QEnterEvent, QPalette, QIcon, QAction
-from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize, QEvent, Slot, QSettings
+from PySide6.QtGui import QPixmap, QEnterEvent, QPalette, QIcon, QAction, QCloseEvent
+from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize, QEvent, Slot, QSettings, QByteArray
 
 from project_explorer.data.project import ProjectSummary, Project
 
@@ -76,9 +76,11 @@ def load_projects_from_path(path: Path) -> list[Project]:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Project Explorer")
-
         self.settings = QSettings("Project Explorer", "Project Explorer")
+
+        self.restoreGeometry( self.settings.value("window_geometry", type=QByteArray) )
+
+        self.setWindowTitle("Project Explorer")
 
         self.browser = ProjectBrowser()
 
@@ -126,3 +128,7 @@ class MainWindow(QMainWindow):
         self._update_recent_menu()
 
         self._load_vault(Path(directory))
+
+    def closeEvent(self, event: QCloseEvent):
+        self.settings.setValue( "window_geometry", self.saveGeometry() )
+        return super().closeEvent(event)

@@ -1,6 +1,9 @@
 from typing import Any, cast
+import subprocess
+import os
+import platform
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog, QGridLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog, QGridLayout, QLineEdit, QTextEdit, QHBoxLayout, QPushButton
 
 from PySide6.QtGui import QPixmap, QPalette
 from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent
@@ -20,6 +23,7 @@ from project_explorer.ui.multi_image import MultiImage
 class ProjectCard(QWidget):
 
     place_holder_image: QPixmap | None = None
+    project : Project | None = None
 
     @copy_method_params(QWidget.__init__)
     def __init__(self, *args: Any, **kwargs: Any):
@@ -57,8 +61,9 @@ class ProjectCard(QWidget):
         # Navigation
         self.nav_bar = ProjectNavigationBar()
         overlay.addWidget(self.nav_bar)
-        self.nav_bar.next_button.clicked.connect(lambda: self.bg.view_next_image())
         self.nav_bar.previous_button.clicked.connect(lambda: self.bg.view_previous_image())
+        self.nav_bar.open_in_button.clicked.connect(lambda: self._open_in_explorer())
+        self.nav_bar.next_button.clicked.connect(lambda: self.bg.view_next_image())
 
         # Spacer
         spacer = QWidget()
@@ -91,6 +96,8 @@ class ProjectCard(QWidget):
         self.name_label.setText(project.project_summary.name)
         self.tags_widget.set_tags(project.project_summary.tags)
 
+        self.project = project
+
         if (project.path / "thumbnails").is_dir():
             for image in (project.path / "thumbnails").iterdir():
                 image_loader.load_image_for(self, image)
@@ -116,6 +123,54 @@ class ProjectCard(QWidget):
         self.popMenu.exec(self.mapToGlobal(point))
 
     def _edit_screen(self) -> None:
+        if self.project is None:
+            return
+
         my_progress_dialog = QDialog(self)
         my_progress_dialog.setModal(True)
+        my_progress_dialog.setWindowTitle(f"Editing {self.project.project_summary.name} ({self.project.path.as_posix()})")
+
+        layout = QGridLayout(my_progress_dialog)
+
+        name = QLineEdit()
+        tags = QTextEdit()
+
+        layout.addWidget(QLabel("Name:"),0,0)
+        layout.addWidget(QLabel("Tags:"),1,0)
+        layout.addWidget(name,0,1)
+        layout.addWidget(tags,1,1)
+
+        additional_layout = QHBoxLayout()
+
+        show_thumbnail = QPushButton()
+        show_thumbnail.setText("Open thumbnails folder")
+        additional_layout.addWidget(show_thumbnail)
+
+        save = QPushButton()
+        save.setText("&Save")
+        additional_layout.addWidget(save)
+
+        cancel = QPushButton()
+        cancel.setText("&Cancel")
+        additional_layout.addWidget(cancel)
+
+        additional_layout
+
+        layout.addLayout(additional_layout,2,0,1,2)
+
+
         my_progress_dialog.show()
+
+    def _open_in_explorer(self) -> None:
+
+        if self.project is None:
+            return
+
+        path = self.project.path
+
+        if os.name in ["nt", "ce"]:
+            os.startfile(os.path.normpath(path))
+        elif "darwin" in platform.system().casefold():
+            subprocess.run(["open", str(path)], check=True)
+        else:  # assume Linux or other POSIX-like
+            subprocess.run(["xdg-open", str(path)], check=True)

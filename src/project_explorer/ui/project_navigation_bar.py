@@ -39,10 +39,9 @@ class ProjectNavigationBar(QWidget):
 
         self.previous_button = self._add_button(chevron_left)
         self.open_in_button = self._add_button(open_in)
-        self.terminal_button = self._add_button(terminal)
         self.next_button = self._add_button(chevron_right)
 
-        for button in [self.previous_button, self.open_in_button, self.terminal_button, self.next_button]:
+        for button in [self.previous_button, self.open_in_button, self.next_button]:
             layout.addWidget(button)
 
         policy = QSizePolicy()
