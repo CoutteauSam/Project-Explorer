@@ -57,6 +57,11 @@ class MainWindow(QMainWindow):
         file_menu.addMenu(self.recent_menu)
         self._update_recent_menu()
 
+        recent_dirs = self.settings.value("recent_dirs", [], type=list)
+
+        if recent_dirs:
+            self._load_vault(Path(recent_dirs[0]))
+
     def _update_recent_menu(self):
         self.recent_menu.clear()
         recent_dirs = self.settings.value("recent_dirs", [], type=list)
