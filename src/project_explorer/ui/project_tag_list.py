@@ -1,4 +1,5 @@
 from typing import Any
+import hashlib
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -8,12 +9,24 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from PySide6.QtGui import  QEnterEvent, QPalette
+from PySide6.QtGui import  QEnterEvent, QPalette, QColor
 from PySide6.QtCore import Qt, QEvent
 
 from project_explorer.utility.typing import copy_method_params
 
 from project_explorer.ui.flow_layout import FlowLayout
+
+def color_for_string(text: str, dark_mode: bool = True):
+    hash_bytes = hashlib.md5(text.encode('utf-8')).digest()
+    seed = int.from_bytes(hash_bytes, 'big')
+
+    one, two = (seed & 2**8 - 1) / 2**8, ( (seed >> 8 ) & 2**8 - 1) / 2**8 
+
+    h = int(255 * one)
+    s = int(255* two)
+    l = 100 if dark_mode else 230
+
+    return f"hsl( {h},{s},{l} )"
 
 class ProjectTagList(QScrollArea):
     @copy_method_params(QScrollArea.__init__)
@@ -52,7 +65,7 @@ class ProjectTagList(QScrollArea):
         for tag in tags:
             label = QLabel(tag)
             label.setStyleSheet(
-                "background-color: pink; padding: 2px 6px; border-radius: 10px;"
+                f"background-color: {color_for_string(tag)}; padding: 2px 6px; border-radius: 10px;"
             )
             self.tag_layout.addWidget(label)
 

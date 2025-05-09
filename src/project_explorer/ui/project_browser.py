@@ -30,7 +30,8 @@ def load_project(path: Path) -> ProjectSummary | None:
         project = ProjectSummary.model_validate_json(
             info_path.read_text(encoding="utf-8")
         )
-    except (ValidationError, OSError):
+    except (ValidationError, OSError) as e:
+        print(e)
         return None
 
     return project
@@ -118,7 +119,7 @@ class ProjectBrowser(QWidget):
         folder_name = dialog.textValue()
 
         summary = ProjectSummary(name=folder_name, tags=[])
-        path = self.projects_path / folder_name
+        path = self.projects_path / f"{folder_name}.project"
 
         if path.exists():
             return

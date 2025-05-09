@@ -32,7 +32,6 @@ def open_path_in_explorer( path: Path ):
     else:  # assume Linux or other POSIX-like
         subprocess.run(["xdg-open", str(path)], check=True)
 
-
 class ProjectCard(QWidget):
 
     place_holder_image: QPixmap | None = None
