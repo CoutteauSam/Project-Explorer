@@ -76,6 +76,7 @@ class ProjectCard(QWidget):
         overlay.addWidget(self.nav_bar)
         self.nav_bar.previous_button.clicked.connect(lambda: self.bg.view_previous_image())
         self.nav_bar.open_in_button.clicked.connect(lambda: self._open_in_explorer())
+        self.nav_bar.edit_button.clicked.connect(lambda: self._edit_screen())
         self.nav_bar.next_button.clicked.connect(lambda: self.bg.view_next_image())
 
         # Spacer
@@ -98,12 +99,6 @@ class ProjectCard(QWidget):
         overlay.addWidget(self.name_label)
 
         stack.addLayout(overlay,0,0)
-
-        self.popMenu = QMenu(self)
-        self.popMenu.addAction("Edit", self._edit_screen)
-
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._open_context_menu)
 
     def set_project(self, project: Project):
         self.project = project
@@ -135,10 +130,6 @@ class ProjectCard(QWidget):
             return True
 
         return super().event(event)
-
-    @Slot()
-    def _open_context_menu(self, point: QPoint):
-        self.popMenu.exec(self.mapToGlobal(point))
 
     def _edit_screen(self) -> None:
         if self.project is None:
