@@ -73,7 +73,7 @@ class MultiImage(QWidget):
         if not self.has_multiple_images():
             return
         
-        self.index = ( self.index + 1 ) % len(self.images)
+        self.index = ( self.index - 1 ) % len(self.images)
 
         self._fit_image()
 
