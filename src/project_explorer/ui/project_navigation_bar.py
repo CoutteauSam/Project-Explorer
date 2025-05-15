@@ -37,11 +37,11 @@ class ProjectNavigationBar(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        self.previous_button = self._add_button(chevron_left)
-        self.reload_button = self._add_button(reload)
-        self.open_in_button = self._add_button(open_in)
-        self.edit_button = self._add_button(edit)
-        self.next_button = self._add_button(chevron_right)
+        self.previous_button = self._add_button(chevron_left, "previous thumbnail")
+        self.reload_button = self._add_button(reload, "reload project from disk")
+        self.open_in_button = self._add_button(open_in, "open project in explorer")
+        self.edit_button = self._add_button(edit, "edit project meta data")
+        self.next_button = self._add_button(chevron_right, "next thumbnail")
 
         for button in [self.previous_button, self.reload_button, self.open_in_button, self.edit_button, self.next_button]:
             layout.addWidget(button)
@@ -54,10 +54,11 @@ class ProjectNavigationBar(QWidget):
         self.next_button.setSizePolicy(policy)
         self.next_button.setVisible(False)
 
-    def _add_button(self, icon_path: str) -> QPushButton:
+    def _add_button(self, icon_path: str, tooltip: str) -> QPushButton:
         button = QPushButton()
         button.setIcon(QIcon(QPixmap(icon_path)))
         button.setFixedSize(28, 28)
         button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button.setToolTip(tooltip)
 
         return button
