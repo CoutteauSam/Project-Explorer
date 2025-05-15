@@ -30,7 +30,7 @@ class ProjectNavigationBar(QWidget):
             """
         )
         pal = QPalette()
-        pal.setColor(QPalette.ColorRole.Window, "#88555555")
+        pal.setColor(QPalette.ColorRole.Window, "#CC555555")
         self.setPalette(pal)
         self.setAutoFillBackground(True)
 

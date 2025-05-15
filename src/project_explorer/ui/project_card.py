@@ -90,12 +90,16 @@ class ProjectCard(QWidget):
 
         # Project name
         pal = QPalette()
-        pal.setColor(QPalette.ColorRole.Window, "#88555555")
+        pal.setColor(QPalette.ColorRole.Window, "#CC555555")
         self.name_label = QLabel("")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_label.setContentsMargins(10, 10, 10, 10)
         self.name_label.setPalette(pal)
         self.name_label.setAutoFillBackground(True)
+        font = self.name_label.font()
+        font.setPointSize(12)
+        font.setBold(True)
+        self.name_label.setFont(font)
         overlay.addWidget(self.name_label)
 
         stack.addLayout(overlay,0,0)
