@@ -61,13 +61,13 @@ class Tag(QWidget):
         layout.setContentsMargins(6,2,6,2)
 
         self.label = QLabel("")
-        #self.label.setObjectName("tag")
 
         layout.addWidget(self.label)
 
         self.remove_button = QPushButton()
         self.remove_button.setIcon(QIcon(QPixmap(close)))
         self.remove_button.setContentsMargins(20,20,20,20)
+        self.remove_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.remove_button)
 
         self.remove_button.clicked.connect(lambda: QCoreApplication.sendEvent(self.parent(), RemoveTagEvent(self)))
@@ -117,9 +117,12 @@ class TagList(SortedFlowContainer[str]):
         self._tags = []
 
     def add_tag(self, tag:str):
-        tag_widget = Tag().set_editable(self._editable).set_tag(tag)
-        self._tags.append(tag_widget)
-        self.insert(tag, tag_widget)
+        if not self.has_element(tag):
+            tag_widget = Tag().set_editable(self._editable).set_tag(tag)
+            self.insert(tag, tag_widget)
+            self._tags.append(tag_widget)
+        else:
+            print("stop")
 
     def set_editable(self, editable: bool) -> Self:
         self._editable = editable
@@ -140,6 +143,9 @@ class TagList(SortedFlowContainer[str]):
             return True
 
         return super().event(event)
+    
+    def get_tags(self):
+        return [tag.tag for tag in self._tags]
 
 class ProjectTagList(QScrollArea):
     @copy_method_params(QScrollArea.__init__)

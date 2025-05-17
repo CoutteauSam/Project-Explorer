@@ -6,8 +6,8 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog, QGridLayout, QLineEdit, QTextEdit, QHBoxLayout, QPushButton
 
-from PySide6.QtGui import QPixmap, QPalette
-from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent
+from PySide6.QtGui import QPixmap, QPalette, QKeyEvent
+from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent, QObject, QCoreApplication
 
 from project_explorer.assets import dummy
 
@@ -16,7 +16,7 @@ from project_explorer.utility.typing import copy_method_params
 from project_explorer.data.project import Project
 
 from project_explorer.ui.project_navigation_bar import ProjectNavigationBar
-from project_explorer.ui.project_tag_list import ProjectTagList
+from project_explorer.ui.project_tag_list import ProjectTagList, TagList
 from project_explorer.ui.image_loader import ImageLoadedEvent, ImageLoader
 from project_explorer.ui.multi_image import MultiImage
 
@@ -146,14 +146,33 @@ class ProjectCard(QWidget):
         layout = QGridLayout(my_progress_dialog)
 
         name = QLineEdit()
+        name.installEventFilter(self)
         name.setText( self.project.project_summary.name )
-        tags = QTextEdit()
-        tags.setText( ", ".join( self.project.project_summary.tags ) )
+
+        name.setFocusPolicy(Qt.FocusPolicy(11))
+
+        tags_input = QLineEdit()
+        tags_input.installEventFilter(self)
+        tags_input.setPlaceholderText("Add one or more tags <comma separated>")
+
+        tags = TagList()
+        tags.set_editable(True)
+        for tag in self.project.project_summary.tags:
+            tags.add_tag(tag)
+
+        def _add_new_tags():
+            for tag_str in tags_input.text().split(","):
+                tags.add_tag( tag_str.strip() )
+            
+            tags_input.setText("")
+
+        tags_input.returnPressed.connect(_add_new_tags)
 
         layout.addWidget(QLabel("Name:"),0,0)
         layout.addWidget(QLabel("Tags:"),1,0)
         layout.addWidget(name,0,1)
-        layout.addWidget(tags,1,1)
+        layout.addWidget(tags_input,1,1)
+        layout.addWidget(tags,2,1)
 
         additional_layout = QHBoxLayout()
 
@@ -169,7 +188,7 @@ class ProjectCard(QWidget):
 
         save = QPushButton()
         save.setText("&Save")
-        save.clicked.connect(lambda: (self._save_project(name.text(),tags.toPlainText()),my_progress_dialog.close()))
+        save.clicked.connect(lambda: (self._save_project(name.text(),tags.get_tags()),my_progress_dialog.close()))
         additional_layout.addWidget(save)
 
         cancel = QPushButton()
@@ -177,16 +196,20 @@ class ProjectCard(QWidget):
         cancel.clicked.connect( lambda: my_progress_dialog.close() )
         additional_layout.addWidget(cancel)
 
-        layout.addLayout(additional_layout,2,0,1,2)
+        layout.addLayout(additional_layout,3,0,1,2)
+
+        for button in my_progress_dialog.findChildren(QPushButton):
+            button.setDefault(False)
+            button.setAutoDefault(False)
 
         my_progress_dialog.show()
 
-    def _save_project(self, name:str, tags:str) -> None:
+    def _save_project(self, name:str, tags:list[str]) -> None:
         if self.project is None:
             return
 
         self.project.project_summary.name = name
-        self.project.project_summary.tags = list(set(tag.strip() for tag in tags.split(",") if tag.strip()))
+        self.project.project_summary.tags = tags
 
         with open(self.project.path / "project-info.json", "w", encoding="utf-8") as file:
             file.write(self.project.project_summary.model_dump_json())

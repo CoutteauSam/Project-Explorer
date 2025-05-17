@@ -25,6 +25,9 @@ class SortedFlowContainer(QWidget,Generic[Key]):
 
         self._layout = FlowLayout(self)
     
+    def has_element(self, key: Key):
+        return key in self._elements
+
     def insert( self, key: Key, widget: QWidget ) -> None:
         if key in self._elements:
             return
@@ -41,12 +44,13 @@ class SortedFlowContainer(QWidget,Generic[Key]):
         
         deletion_index = self._elements.index(key)
 
-        test = self._layout.takeAt(deletion_index)
+        self._layout.takeAt(deletion_index)
         self._elements.pop(key)
 
         self._layout.invalidate()
 
     def clear_all(self)->None:
+        self._elements.clear()
         while self._layout.count():
             child = self._layout.takeAt(0)
             if child.widget():
