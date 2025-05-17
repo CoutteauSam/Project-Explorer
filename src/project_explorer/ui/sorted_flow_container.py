@@ -41,7 +41,10 @@ class SortedFlowContainer(QWidget,Generic[Key]):
         
         deletion_index = self._elements.index(key)
 
-        self._layout.takeAt(deletion_index)
+        test = self._layout.takeAt(deletion_index)
+        self._elements.pop(key)
+
+        self._layout.invalidate()
 
     def clear_all(self)->None:
         while self._layout.count():

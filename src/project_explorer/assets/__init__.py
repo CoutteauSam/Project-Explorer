@@ -7,5 +7,6 @@ chevron_right = assets / "chevron_right.svg"
 open_in = assets / "open_in.svg"
 edit = assets / "edit.svg"
 reload = assets / "reload.svg"
+close = assets / "close.svg"
 
 dummy = assets / "dummy.png"
