@@ -4,4 +4,3 @@
 * project card size settings
 * tag color overrides
 * improved tag editing
-* sorted container

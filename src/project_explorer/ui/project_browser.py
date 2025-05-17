@@ -20,6 +20,7 @@ from project_explorer.data.query import Query, parse_query, InvalidQuery
 from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard
 from project_explorer.ui.image_loader import ImageLoader
+from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
 
 def load_project(path: Path) -> ProjectSummary | None:
@@ -86,8 +87,6 @@ class ProjectBrowser(QWidget):
 
         tools_layout.addWidget(self.add_new_project_button)
 
-        self.widgets = []
-
         # Search bar
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search projects...")
@@ -101,11 +100,10 @@ class ProjectBrowser(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_content = QWidget()
-        scroll_content.setContentsMargins(20, 0, 20, 0)
-        self.scroll_layout = FlowLayout(scroll_content)
+        self.project_cards = SortedFlowContainer()
+        self.project_cards.setContentsMargins(20, 0, 20, 0)
 
-        scroll_area.setWidget(scroll_content)
+        scroll_area.setWidget(self.project_cards)
         main_layout.addWidget(scroll_area)
 
     def _filter_cards(self)->None:
@@ -117,7 +115,7 @@ class ProjectBrowser(QWidget):
             # TODO: communicate
             return
         
-        for card in self.widgets:
+        for card in self.project_cards.widgets():
             card.setVisible(query.evaluate(dict(card.project.project_summary)))
 
     def _create_new_project_action(self) -> None:
@@ -151,19 +149,12 @@ class ProjectBrowser(QWidget):
         card.set_image_loader(self.image_loader)
         card.set_project(Project(path=path, project_summary=summary))
 
-        self.widgets.append(card)
-        self.scroll_layout.addWidget(card)
+        self.project_cards.insert(path, card)
 
     def set_projects_path(self, projects_path: Path) -> None:
-        layout = self.scroll_layout
-
         self.projects_path = None
 
-        self.widgets = []
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        self.project_cards.clear_all()
 
         self.projects_path = projects_path
 
@@ -176,5 +167,4 @@ class ProjectBrowser(QWidget):
             card.set_image_loader(self.image_loader)
             card.set_project(project)
 
-            self.widgets.append(card)
-            layout.addWidget(card)
+            self.project_cards.insert(project.path, card)

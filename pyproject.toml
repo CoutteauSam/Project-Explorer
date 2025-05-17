@@ -10,7 +10,8 @@ dependencies = [
     'pydantic',
     "lark",
     "regex",
-    "PySide6"
+    "PySide6",
+    "sortedcontainers"
 ]
 
 [tool.setuptools.package-data]
