@@ -18,6 +18,9 @@ from project_explorer.utility.typing import copy_method_params
 
 from project_explorer.assets import close
 
+from project_explorer.ui.extension.widget import Widget
+from project_explorer.ui.extension.event import PropagatingEvent
+
 from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
@@ -34,7 +37,7 @@ def color_for_string(text: str, dark_mode: bool = True):
 
     return f"hsl( {h},{s},{l} )"
 
-class RemoveTagEvent(QEvent):
+class RemoveTagEvent(PropagatingEvent):
     tag: "Tag"
 
     s_type: int = QEvent.registerEventType()
@@ -43,11 +46,11 @@ class RemoveTagEvent(QEvent):
         super().__init__(QEvent.Type(self.s_type))
         self.tag = tag
 
-class Tag(QWidget):
+class Tag(Widget):
     _editable: bool = False
     tag: str = ""
 
-    @copy_method_params(QWidget.__init__)
+    @copy_method_params(Widget.__init__)
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -70,7 +73,7 @@ class Tag(QWidget):
         self.remove_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.remove_button)
 
-        self.remove_button.clicked.connect(lambda: QCoreApplication.sendEvent(self.parent(), RemoveTagEvent(self)))
+        self.remove_button.clicked.connect(lambda: QCoreApplication.sendEvent(self, RemoveTagEvent(self)))
 
         self.remove_button.setVisible(self._editable)
 

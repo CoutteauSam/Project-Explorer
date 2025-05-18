@@ -8,5 +8,8 @@ open_in = assets / "open_in.svg"
 edit = assets / "edit.svg"
 reload = assets / "reload.svg"
 close = assets / "close.svg"
+favorite_on = assets / "favorite_on.svg"
+favorite_off = assets / "favorite_off.svg"
+arrow_down = assets / "arrow_down.svg"
 
 dummy = assets / "dummy.png"

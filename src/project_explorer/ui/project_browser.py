@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from pydantic import ValidationError
 
@@ -6,12 +7,19 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QPushButton,
     QLineEdit,
+    QToolButton,
     QScrollArea,
     QFrame,
     QInputDialog,
+    QComboBox,
 )
+from PySide6.QtGui import QPixmap, QPalette, QIcon, QShortcut, QKeySequence
+from PySide6.QtCore import Qt, QSettings, QEvent
+
+from project_explorer.assets import favorite_off, favorite_on
 
 from project_explorer.data.project import ProjectSummary, Project
 
@@ -20,6 +28,7 @@ from project_explorer.data.query import Query, parse_query, InvalidQuery
 from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard
 from project_explorer.ui.image_loader import ImageLoader
+from project_explorer.ui.line_edit_history import LineEditHistory, LineEditHistorySubmittedEvent
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
 
@@ -72,11 +81,13 @@ class ProjectBrowser(QWidget):
         self.setWindowTitle("Project Browser")
         self.setGeometry(100, 100, 900, 400)
 
+        self.settings = QSettings("Project Explorer", "Project Explorer")
+
         self.image_loader = ImageLoader()
 
         main_layout = QVBoxLayout(self)
 
-        tools_layout = QHBoxLayout()
+        tools_layout = QGridLayout()
 
         self.add_new_project_button = QPushButton()
         self.add_new_project_button.setText("New Project")
@@ -85,14 +96,18 @@ class ProjectBrowser(QWidget):
         )
         self.add_new_project_button.setEnabled(False)
 
-        tools_layout.addWidget(self.add_new_project_button)
+        tools_layout.addWidget(self.add_new_project_button,0,0)
 
         # Search bar
-        self.search_bar = QLineEdit()
-        self.search_bar.setPlaceholderText("Search projects...")
-        self.search_bar.returnPressed.connect(lambda: self._filter_cards())
+        self.search_bar = LineEditHistory()
+        self.search_bar.set_storage(self.settings, "favorite_queries")
+        self.search_bar.field.setPlaceholderText("Search projects...")
 
-        tools_layout.addWidget(self.search_bar)
+        tools_layout.addWidget(self.search_bar,0,1)
+
+        tools_layout.setColumnStretch(0,0)
+        tools_layout.setColumnStretch(1,1)
+        tools_layout.setColumnStretch(2,0)
 
         main_layout.addLayout(tools_layout)
 
@@ -106,10 +121,21 @@ class ProjectBrowser(QWidget):
         scroll_area.setWidget(self.project_cards)
         main_layout.addWidget(scroll_area)
 
-    def _filter_cards(self)->None:
-        query_text = self.search_bar.text()
+    def event(self, event: QEvent) -> bool:
+        if event.type() == LineEditHistorySubmittedEvent.s_type:
+            query_submitted_event = cast(LineEditHistorySubmittedEvent, event)
+            self._filter_cards(query_submitted_event.text)
+            return True
 
-        query = parse_query(query_text)
+        return super().event(event)
+
+    def _filter_cards(self, query_text:str)->None:
+        if query_text.strip() == "":
+            for card in self.project_cards.widgets():
+                card.setVisible(True)
+            return
+
+        query = parse_query(query_text.strip())
 
         if isinstance(query, InvalidQuery):
             # TODO: communicate
