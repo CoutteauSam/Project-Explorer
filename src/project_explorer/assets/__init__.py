@@ -11,5 +11,7 @@ close = assets / "close.svg"
 favorite_on = assets / "favorite_on.svg"
 favorite_off = assets / "favorite_off.svg"
 arrow_down = assets / "arrow_down.svg"
+error = assets / "error.svg"
 
 dummy = assets / "dummy.png"
+missing = assets / "missing.png"

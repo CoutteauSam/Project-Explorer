@@ -21,3 +21,15 @@ class Project(BaseModel):
     """
     path: Path
     project_summary: ProjectSummary
+
+class InvalidProject(BaseModel):
+    """
+    An invalid project
+    """
+    path: Path
+
+class MissingProject(BaseModel):
+    """
+    A project which no longer exists
+    """
+    path: Path

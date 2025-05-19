@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import cast
 
-from pydantic import ValidationError
-
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -21,35 +19,18 @@ from PySide6.QtCore import Qt, QSettings, QEvent
 
 from project_explorer.assets import favorite_off, favorite_on
 
-from project_explorer.data.project import ProjectSummary, Project
+from project_explorer.data.project import ProjectSummary, Project, InvalidProject, MissingProject
 
 from project_explorer.data.query import Query, parse_query, InvalidQuery
 
 from project_explorer.ui.flow_layout import FlowLayout
-from project_explorer.ui.project_card import ProjectCard
+from project_explorer.ui.project_card import ProjectCard, load_project
 from project_explorer.ui.image_loader import ImageLoader
 from project_explorer.ui.line_edit_history import LineEditHistory, LineEditHistorySubmittedEvent
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
 
-def load_project(path: Path) -> ProjectSummary | None:
-    info_path = path / "project-info.json"
-
-    if not info_path.exists() or not info_path.is_file():
-        return None
-
-    try:
-        project = ProjectSummary.model_validate_json(
-            info_path.read_text(encoding="utf-8")
-        )
-    except (ValidationError, OSError) as e:
-        print(e)
-        return None
-
-    return project
-
-
-def load_projects_from_path(path: Path) -> list[Project]:
+def load_projects_from_path(path: Path) -> list[Project|InvalidProject|MissingProject]:
     """Load or reload project from a given root path"""
 
     projects = []
@@ -62,12 +43,7 @@ def load_projects_from_path(path: Path) -> list[Project]:
             continue
 
         project = load_project(sub_directory)
-
-        if project is None:
-            # TODO: communicate this to the user
-            continue
-
-        projects.append(Project(path=sub_directory, project_summary=project))
+        projects.append(project)
 
     return projects
 

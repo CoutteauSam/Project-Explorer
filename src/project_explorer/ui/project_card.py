@@ -4,21 +4,38 @@ import os
 import platform
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog, QGridLayout, QLineEdit, QTextEdit, QHBoxLayout, QPushButton
 
 from PySide6.QtGui import QPixmap, QPalette, QKeyEvent
 from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent, QObject, QCoreApplication
 
-from project_explorer.assets import dummy
-
 from project_explorer.utility.typing import copy_method_params
 
-from project_explorer.data.project import Project
+from project_explorer.data.project import Project, InvalidProject, MissingProject, ProjectSummary
 
 from project_explorer.ui.project_navigation_bar import ProjectNavigationBar
 from project_explorer.ui.project_tag_list import ProjectTagList, TagList
 from project_explorer.ui.image_loader import ImageLoadedEvent, ImageLoader
 from project_explorer.ui.multi_image import MultiImage
+
+def load_project(path: Path) -> Project | InvalidProject | MissingProject:
+    if not path.exists() or not path.is_dir():
+        return MissingProject(path=path)
+
+    info_path = path / "project-info.json"
+
+    if not info_path.exists() or not info_path.is_file():
+        return InvalidProject(path=path)
+
+    try:
+        project_summary = ProjectSummary.model_validate_json(
+            info_path.read_text(encoding="utf-8")
+        )
+        return Project(path=path, project_summary=project_summary)
+    except (ValidationError, OSError) as e:
+        return InvalidProject(path=path)
 
 def open_path_in_explorer( path: Path ):
 
@@ -34,8 +51,7 @@ def open_path_in_explorer( path: Path ):
 
 class ProjectCard(QWidget):
 
-    place_holder_image: QPixmap | None = None
-    project : Project | None = None
+    project : Project | InvalidProject | MissingProject = MissingProject(path=Path("/"))
     image_loader: ImageLoader
 
     @copy_method_params(QWidget.__init__)
@@ -47,14 +63,6 @@ class ProjectCard(QWidget):
         pal.setColor(QPalette.ColorRole.Window, "#555555")
         self.setPalette(pal)
         self.setAutoFillBackground(True)
-
-        if ProjectCard.place_holder_image is None:
-            ProjectCard.place_holder_image = QPixmap(dummy).scaled(
-                100,
-                100,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
 
         stack = QGridLayout(self)
 
@@ -78,6 +86,11 @@ class ProjectCard(QWidget):
         self.nav_bar.open_in_button.clicked.connect(lambda: self._open_in_explorer())
         self.nav_bar.edit_button.clicked.connect(lambda: self._edit_screen())
         self.nav_bar.next_button.clicked.connect(lambda: self.bg.view_next_image())
+        self.nav_bar.reload_button.clicked.connect(lambda: self.set_project(load_project(self.project.path)))
+
+        self.nav_bar.edit_button.hide()
+        self.nav_bar.error_label.setToolTip("Project is being loaded")
+        self.nav_bar.error_label.show()
 
         # Spacer
         spacer = QWidget()
@@ -100,11 +113,12 @@ class ProjectCard(QWidget):
         font.setPointSize(12)
         font.setBold(True)
         self.name_label.setFont(font)
+        
         overlay.addWidget(self.name_label)
 
         stack.addLayout(overlay,0,0)
 
-    def set_project(self, project: Project):
+    def set_project(self, project: Project | InvalidProject | MissingProject):
         self.project = project
         self._update_project()
 
@@ -112,8 +126,26 @@ class ProjectCard(QWidget):
         self.image_loader = image_loader
 
     def _update_project( self )->None:
-        self.name_label.setText(self.project.project_summary.name)
-        self.tags_widget.set_tags(self.project.project_summary.tags)
+        self.nav_bar.open_in_button.show()
+        self.bg.clear()
+
+        if isinstance(self.project,MissingProject):
+            self.nav_bar.edit_button.hide()
+            self.nav_bar.error_label.setToolTip("Project was not found on disk")
+            self.nav_bar.error_label.show()
+            self.bg.mark_invalid()
+            return
+        
+        self.bg.mark_valid()
+        self.nav_bar.edit_button.show()
+
+        if isinstance(self.project,InvalidProject):
+            self.nav_bar.error_label.setToolTip("Project found but contains no meta data")
+            self.nav_bar.error_label.show()
+        else:        
+            self.name_label.setText(self.project.project_summary.name)
+            self.tags_widget.set_tags(self.project.project_summary.tags)
+            self.nav_bar.error_label.hide()
 
         if (self.project.path / "thumbnails").is_dir():
             for image in (self.project.path / "thumbnails").iterdir():
@@ -136,18 +168,27 @@ class ProjectCard(QWidget):
         return super().event(event)
 
     def _edit_screen(self) -> None:
-        if self.project is None:
+        if isinstance(self.project,MissingProject):
             return
+        
+        if isinstance(self.project,InvalidProject):
+            project_name = self.project.path.name
+            action = "Creating"
+            project_tags = []
+        else:
+            project_name = self.project.project_summary.name
+            action = "Editing"
+            project_tags = self.project.project_summary.tags
 
         my_progress_dialog = QDialog(self)
         my_progress_dialog.setModal(True)
-        my_progress_dialog.setWindowTitle(f"Editing {self.project.project_summary.name} ({self.project.path.as_posix()})")
+        my_progress_dialog.setWindowTitle(f"{action} {project_name} ({self.project.path.as_posix()})")
 
         layout = QGridLayout(my_progress_dialog)
 
         name = QLineEdit()
         name.installEventFilter(self)
-        name.setText( self.project.project_summary.name )
+        name.setText( project_name )
 
         name.setFocusPolicy(Qt.FocusPolicy(11))
 
@@ -157,7 +198,7 @@ class ProjectCard(QWidget):
 
         tags = TagList()
         tags.set_editable(True)
-        for tag in self.project.project_summary.tags:
+        for tag in project_tags:
             tags.add_tag(tag)
 
         def _add_new_tags():
