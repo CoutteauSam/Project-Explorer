@@ -1,19 +1,22 @@
 from typing import Any
+from pathlib import Path
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QPushButton,
-    QSizePolicy,
-    QLabel
-)
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QSizePolicy, QLabel
 
 from PySide6.QtGui import QPixmap, QPalette, QIcon
 from PySide6.QtCore import Qt
 
 from project_explorer.utility.typing import copy_method_params
 
-from project_explorer.assets import chevron_left, chevron_right, open_in, edit, reload, error
+from project_explorer.assets import (
+    chevron_left,
+    chevron_right,
+    open_in,
+    edit,
+    reload,
+    error,
+)
+
 
 class ProjectNavigationBar(QWidget):
     @copy_method_params(QWidget.__init__)
@@ -46,7 +49,14 @@ class ProjectNavigationBar(QWidget):
         self.edit_button = self._add_button(edit, "edit project meta data")
         self.next_button = self._add_button(chevron_right, "next thumbnail")
 
-        for element in [self.previous_button, self.reload_button, self.open_in_button, self.error_label, self.edit_button, self.next_button]:
+        for element in [
+            self.previous_button,
+            self.reload_button,
+            self.open_in_button,
+            self.error_label,
+            self.edit_button,
+            self.next_button,
+        ]:
             layout.addWidget(element)
 
         self.error_label.hide()
@@ -59,7 +69,7 @@ class ProjectNavigationBar(QWidget):
         self.next_button.setSizePolicy(policy)
         self.next_button.setVisible(False)
 
-    def _add_button(self, icon_path: str, tooltip: str) -> QPushButton:
+    def _add_button(self, icon_path: Path, tooltip: str) -> QPushButton:
         button = QPushButton()
         button.setIcon(QIcon(QPixmap(icon_path)))
         button.setFixedSize(28, 28)

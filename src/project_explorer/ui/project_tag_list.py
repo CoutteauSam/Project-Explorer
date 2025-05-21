@@ -8,10 +8,10 @@ from PySide6.QtWidgets import (
     QFrame,
     QSizePolicy,
     QPushButton,
-    QHBoxLayout
+    QHBoxLayout,
 )
 
-from PySide6.QtGui import  QEnterEvent, QPalette, QColor, QIcon, QPixmap
+from PySide6.QtGui import QEnterEvent, QPalette, QColor, QIcon, QPixmap
 from PySide6.QtCore import Qt, QEvent, QSize, QEvent, QCoreApplication
 
 from project_explorer.utility.typing import copy_method_params
@@ -25,26 +25,28 @@ from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
 
-def color_for_string(text: str, dark_mode: bool = True):
-    hash_bytes = hashlib.md5(text.encode('utf-8')).digest()
-    seed = int.from_bytes(hash_bytes, 'big')
+def color_for_string(text: str, dark_mode: bool = True) -> str:
+    hash_bytes = hashlib.md5(text.encode("utf-8")).digest()
+    seed = int.from_bytes(hash_bytes, "big")
 
-    one, two = (seed & 2**8 - 1) / 2**8, ( (seed >> 8 ) & 2**8 - 1) / 2**8 
+    one, two = (seed & 2**8 - 1) / 2**8, ((seed >> 8) & 2**8 - 1) / 2**8
 
     h = int(255 * one)
-    s = int(255* two)
+    s = int(255 * two)
     l = 100 if dark_mode else 230
 
     return f"hsl( {h},{s},{l} )"
+
 
 class RemoveTagEvent(PropagatingEvent):
     tag: "Tag"
 
     s_type: int = QEvent.registerEventType()
 
-    def __init__(self, tag: str):
+    def __init__(self, tag: "Tag"):
         super().__init__(QEvent.Type(self.s_type))
         self.tag = tag
+
 
 class Tag(Widget):
     _editable: bool = False
@@ -56,12 +58,12 @@ class Tag(Widget):
 
         self._update_stylesheet("")
         self.setObjectName("tag")
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground) 
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.setAutoFillBackground(True)
 
         layout = QHBoxLayout(self)
 
-        layout.setContentsMargins(6,2,6,2)
+        layout.setContentsMargins(6, 2, 6, 2)
 
         self.label = QLabel("")
 
@@ -69,15 +71,17 @@ class Tag(Widget):
 
         self.remove_button = QPushButton()
         self.remove_button.setIcon(QIcon(QPixmap(close)))
-        self.remove_button.setContentsMargins(20,20,20,20)
+        self.remove_button.setContentsMargins(20, 20, 20, 20)
         self.remove_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self.remove_button)
 
-        self.remove_button.clicked.connect(lambda: QCoreApplication.sendEvent(self, RemoveTagEvent(self)))
+        self.remove_button.clicked.connect(
+            lambda: QCoreApplication.sendEvent(self, RemoveTagEvent(self))
+        )
 
         self.remove_button.setVisible(self._editable)
 
-    def _update_stylesheet(self, tag: str):
+    def _update_stylesheet(self, tag: str) -> None:
         self.setStyleSheet(
             f"""
             *#tag{{ 
@@ -99,13 +103,12 @@ class Tag(Widget):
         self._editable = editable
         self.remove_button.setVisible(self._editable)
         return self
-    
-    def set_tag(self, tag:str)->Self:
+
+    def set_tag(self, tag: str) -> Self:
         self._update_stylesheet(tag)
         self.label.setText(tag)
         self.tag = tag
         return self
-    
 
 
 class TagList(SortedFlowContainer[str]):
@@ -119,13 +122,11 @@ class TagList(SortedFlowContainer[str]):
 
         self._tags = []
 
-    def add_tag(self, tag:str):
+    def add_tag(self, tag: str) -> None:
         if not self.has_element(tag):
             tag_widget = Tag().set_editable(self._editable).set_tag(tag)
             self.insert(tag, tag_widget)
             self._tags.append(tag_widget)
-        else:
-            print("stop")
 
     def set_editable(self, editable: bool) -> Self:
         self._editable = editable
@@ -134,7 +135,7 @@ class TagList(SortedFlowContainer[str]):
             tag.set_editable(editable)
 
         return self
-    
+
     def event(self, event: QEvent) -> bool:
         if event.type() == RemoveTagEvent.s_type:
             remove_tag_event = cast(RemoveTagEvent, event)
@@ -146,9 +147,10 @@ class TagList(SortedFlowContainer[str]):
             return True
 
         return super().event(event)
-    
-    def get_tags(self):
+
+    def get_tags(self) -> list[str]:
         return [tag.tag for tag in self._tags]
+
 
 class ProjectTagList(QScrollArea):
     @copy_method_params(QScrollArea.__init__)
@@ -170,14 +172,16 @@ class ProjectTagList(QScrollArea):
         # Tag container
         self.tag_container = TagList()
         self.tag_container.setPalette(pal)
-        self.tag_container.layout().setContentsMargins(5, 0, 5, 0)
-        self.tag_container.layout().setSpacing(4)
+        tag_layout = self.tag_container.layout()
+        if tag_layout is not None:
+            tag_layout.setContentsMargins(5, 0, 5, 0)
+            tag_layout.setSpacing(4)
 
         self.setWidget(self.tag_container)
 
     def set_tags(self, tags: list[str]) -> None:
         self.tag_container.clear_all()
-        
+
         for tag in tags:
             self.tag_container.add_tag(tag)
 
@@ -196,5 +200,3 @@ class ProjectTagList(QScrollArea):
     def leaveEvent(self, event: QEvent) -> None:
         self._collapse()
         return super().leaveEvent(event)
-
-

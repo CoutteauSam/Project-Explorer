@@ -1,16 +1,11 @@
 from typing import Any
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QLayout,
-    QSizePolicy,
-    QLayoutItem,
-    QWidgetItem
-)
+from PySide6.QtWidgets import QWidget, QLayout, QSizePolicy, QLayoutItem, QWidgetItem
 
 from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize
 
 from project_explorer.utility.typing import copy_method_params
+
 
 class FlowLayout(QLayout):
     @copy_method_params(QLayout.__init__)
@@ -26,15 +21,15 @@ class FlowLayout(QLayout):
         while self.count():
             self.takeAt(0)
 
-    def insertItem(self, index: int, item: QLayoutItem):
-        self._item_list.insert(index,item)
+    def insertItem(self, index: int, item: QLayoutItem) -> None:
+        self._item_list.insert(index, item)
 
     def addItem(self, item: QLayoutItem) -> None:
         self._item_list.append(item)
 
-    def insertWidget(self, index:int, widget: QWidget)->None:
-        self.addChildWidget( widget )
-        self.insertItem( index, QWidgetItem(widget) )
+    def insertWidget(self, index: int, widget: QWidget) -> None:
+        self.addChildWidget(widget)
+        self.insertItem(index, QWidgetItem(widget))
 
     def count(self) -> int:
         return len(self._item_list)

@@ -19,18 +19,28 @@ from PySide6.QtCore import Qt, QSettings, QEvent
 
 from project_explorer.assets import favorite_off, favorite_on
 
-from project_explorer.data.project import ProjectSummary, Project, InvalidProject, MissingProject
+from project_explorer.data.project import (
+    ProjectSummary,
+    Project,
+    InvalidProject,
+    MissingProject,
+)
 
 from project_explorer.data.query import Query, parse_query, InvalidQuery
 
 from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard, load_project
 from project_explorer.ui.image_loader import ImageLoader
-from project_explorer.ui.line_edit_history import LineEditHistory, LineEditHistorySubmittedEvent
+from project_explorer.ui.line_edit_history import (
+    LineEditHistory,
+    LineEditHistorySubmittedEvent,
+)
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
 
-def load_projects_from_path(path: Path) -> list[Project|InvalidProject|MissingProject]:
+def load_projects_from_path(
+    path: Path,
+) -> list[Project | InvalidProject | MissingProject]:
     """Load or reload project from a given root path"""
 
     projects = []
@@ -59,7 +69,7 @@ class ProjectBrowser(QWidget):
 
         self.settings = QSettings("Project Explorer", "Project Explorer")
 
-        self.image_loader = ImageLoader()
+        self.image_loader: ImageLoader = ImageLoader()
 
         main_layout = QVBoxLayout(self)
 
@@ -72,18 +82,18 @@ class ProjectBrowser(QWidget):
         )
         self.add_new_project_button.setEnabled(False)
 
-        tools_layout.addWidget(self.add_new_project_button,0,0)
+        tools_layout.addWidget(self.add_new_project_button, 0, 0)
 
         # Search bar
         self.search_bar = LineEditHistory()
         self.search_bar.set_storage(self.settings, "favorite_queries")
         self.search_bar.field.setPlaceholderText("Search projects...")
 
-        tools_layout.addWidget(self.search_bar,0,1)
+        tools_layout.addWidget(self.search_bar, 0, 1)
 
-        tools_layout.setColumnStretch(0,0)
-        tools_layout.setColumnStretch(1,1)
-        tools_layout.setColumnStretch(2,0)
+        tools_layout.setColumnStretch(0, 0)
+        tools_layout.setColumnStretch(1, 1)
+        tools_layout.setColumnStretch(2, 0)
 
         main_layout.addLayout(tools_layout)
 
@@ -91,7 +101,7 @@ class ProjectBrowser(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.project_cards = SortedFlowContainer()
+        self.project_cards: SortedFlowContainer[Path] = SortedFlowContainer()
         self.project_cards.setContentsMargins(20, 0, 20, 0)
 
         scroll_area.setWidget(self.project_cards)
@@ -105,7 +115,7 @@ class ProjectBrowser(QWidget):
 
         return super().event(event)
 
-    def _filter_cards(self, query_text:str)->None:
+    def _filter_cards(self, query_text: str) -> None:
         if query_text.strip() == "":
             for card in self.project_cards.widgets():
                 card.setVisible(True)
@@ -116,9 +126,13 @@ class ProjectBrowser(QWidget):
         if isinstance(query, InvalidQuery):
             # TODO: communicate
             return
-        
+
         for card in self.project_cards.widgets():
-            card.setVisible(query.evaluate(dict(card.project.project_summary)))
+            if isinstance(card, ProjectCard):
+                if isinstance(card.project, Project):
+                    card.setVisible(query.evaluate(dict(card.project.project_summary)))
+                else:
+                    card.setVisible(False)
 
     def _create_new_project_action(self) -> None:
         if self.projects_path is None:

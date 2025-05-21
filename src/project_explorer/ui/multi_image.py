@@ -1,6 +1,14 @@
 from typing import Any, cast
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QMenu, QDialog, QGridLayout
+from PySide6.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QMenu,
+    QDialog,
+    QGridLayout,
+)
 
 from PySide6.QtGui import QPixmap, QPalette, QResizeEvent
 from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent
@@ -25,7 +33,7 @@ class MultiImage(QWidget):
     valid: bool = False
 
     @copy_method_params(QWidget.__init__)
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         self.images = []
@@ -33,13 +41,15 @@ class MultiImage(QWidget):
         if MultiImage.place_holder_image is None:
             MultiImage.place_holder_image = QPixmap(dummy)
             MultiImage.invalid_image = QPixmap(missing)
-        
+
         layout = QGridLayout(self)
 
         self.picture = QLabel(self)
-        
+
         self.picture.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.picture.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.picture.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
 
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -47,52 +57,63 @@ class MultiImage(QWidget):
 
         self._fit_image()
 
-    def _fit_image(self)->None:
+    def _fit_image(self) -> None:
         if self.images:
-            pixmap = self.images[ self.index ]
+            pixmap = self.images[self.index]
         else:
-            pixmap = MultiImage.place_holder_image if self.valid else MultiImage.invalid_image
-            
+            assert MultiImage.place_holder_image is not None
+            assert MultiImage.invalid_image is not None
+            pixmap = (
+                MultiImage.place_holder_image
+                if self.valid
+                else MultiImage.invalid_image
+            )
+
         self.picture.setPixmap(
-            pixmap.scaled(self.picture.width(), self.picture.height(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap.scaled(
+                self.picture.width(),
+                self.picture.height(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
         )
 
-    def mark_valid(self):
+    def mark_valid(self) -> None:
         self.valid = True
         self._fit_image()
 
-    def mark_invalid(self):
+    def mark_invalid(self) -> None:
         self.valid = False
         self._fit_image()
 
-    def clear(self):
+    def clear(self) -> None:
         self.images = []
         self.index = 0
         self._fit_image()
 
-    def has_multiple_images(self)->bool:
+    def has_multiple_images(self) -> bool:
         return len(self.images) > 1
-    
-    def add_image( self, pixmap: QPixmap ):
+
+    def add_image(self, pixmap: QPixmap) -> None:
         self.images.append(pixmap)
         self.mark_valid()
 
-    def view_next_image(self):
+    def view_next_image(self) -> None:
         if not self.has_multiple_images():
             return
-        
-        self.index = ( self.index + 1 ) % len(self.images)
+
+        self.index = (self.index + 1) % len(self.images)
 
         self._fit_image()
 
-    def view_previous_image(self):
+    def view_previous_image(self) -> None:
         if not self.has_multiple_images():
             return
-        
-        self.index = ( self.index - 1 ) % len(self.images)
+
+        self.index = (self.index - 1) % len(self.images)
 
         self._fit_image()
 
-    def resizeEvent(self, event:QResizeEvent):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         self._fit_image()
         return super().resizeEvent(event)

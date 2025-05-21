@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QWidget
 
 from project_explorer.ui.extension.event import Event, Propagation
 
+
 class Widget(QWidget):
     def event(self, event: QEvent) -> bool:
         if isinstance(event, Event):
@@ -13,6 +14,6 @@ class Widget(QWidget):
             return True  # Always mark custom events as handled
         return super().event(event)
 
-    def _propagateToChildren(self, event: QEvent):
+    def _propagateToChildren(self, event: QEvent) -> None:
         for child in self.findChildren(QObject):
             QCoreApplication.sendEvent(child, event)
