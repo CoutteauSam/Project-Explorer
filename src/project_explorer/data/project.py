@@ -1,6 +1,7 @@
 """Contains datastructures describing a project"""
 
 from pathlib import Path
+from typing import TypeGuard, Any
 
 from pydantic import BaseModel
 
@@ -24,7 +25,6 @@ class Project(BaseModel):
     path: Path
     project_summary: ProjectSummary
 
-
 class InvalidProject(BaseModel):
     """
     An invalid project
@@ -32,10 +32,12 @@ class InvalidProject(BaseModel):
 
     path: Path
 
-
 class MissingProject(BaseModel):
     """
     A project which no longer exists
     """
 
     path: Path
+
+def project_is_valid( project: Any ) -> TypeGuard[Project]:
+    return isinstance(project,Project)

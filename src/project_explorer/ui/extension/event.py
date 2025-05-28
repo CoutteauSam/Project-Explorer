@@ -1,8 +1,11 @@
-from typing import Self, Any
+from typing import Self, Any, Type, Protocol, TypeAlias
+from abc import ABCMeta, abstractmethod, ABC
 
 from enum import Enum
 
 from PySide6.QtCore import QEvent
+
+from project_explorer.utility.typing import Abstract
 
 
 class Propagation(Enum):
@@ -10,34 +13,20 @@ class Propagation(Enum):
     DOWN = "Down"
 
 
-class Event(QEvent):
-    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
-        if cls is Event:
-            msg = "Abstract class {} cannot be instantiated".format(cls.__name__)
-            raise TypeError(msg)
-        return super(Event, cls).__new__(cls, *args, **kwargs)
+class Event(Abstract,QEvent):
+    __abstract__ = True
 
     def propagation(self) -> Propagation | None:
         return None
 
-
 class PropagatingEvent(Event):
-    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
-        if cls is Event:
-            msg = "Abstract class {} cannot be instantiated".format(cls.__name__)
-            raise TypeError(msg)
-        return super(Event, cls).__new__(cls, *args, **kwargs)
+    __abstract__ = True
 
     def propagation(self) -> Propagation | None:
         return Propagation.UP
 
-
 class BroadcastEvent(Event):
-    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
-        if cls is Event:
-            msg = "Abstract class {} cannot be instantiated".format(cls.__name__)
-            raise TypeError(msg)
-        return super(Event, cls).__new__(cls, *args, **kwargs)
+    __abstract__ = True
 
     def propagation(self) -> Propagation | None:
         return Propagation.DOWN

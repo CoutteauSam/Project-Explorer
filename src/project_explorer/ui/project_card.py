@@ -1,10 +1,5 @@
 from typing import Any, cast
-import subprocess
-import os
-import platform
 from pathlib import Path
-
-from pydantic import ValidationError
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -20,8 +15,8 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 
-from PySide6.QtGui import QPixmap, QPalette, QKeyEvent
-from PySide6.QtCore import Qt, QPoint, Slot, QSize, QEvent, QObject, QCoreApplication
+from PySide6.QtGui import QPixmap, QPalette
+from PySide6.QtCore import Qt, QEvent
 
 from project_explorer.utility.typing import copy_method_params
 
@@ -29,44 +24,17 @@ from project_explorer.data.project import (
     Project,
     InvalidProject,
     MissingProject,
-    ProjectSummary,
+    project_is_valid
 )
+
+from project_explorer.io.project import load_project
+from project_explorer.io.tools import open_path_in_explorer
 
 from project_explorer.ui.project_navigation_bar import ProjectNavigationBar
 from project_explorer.ui.project_tag_list import ProjectTagList, TagList
 from project_explorer.ui.image_loader import ImageLoadedEvent, ImageLoader
 from project_explorer.ui.multi_image import MultiImage
-
-
-def load_project(path: Path) -> Project | InvalidProject | MissingProject:
-    if not path.exists() or not path.is_dir():
-        return MissingProject(path=path)
-
-    info_path = path / "project-info.json"
-
-    if not info_path.exists() or not info_path.is_file():
-        return InvalidProject(path=path)
-
-    try:
-        project_summary = ProjectSummary.model_validate_json(
-            info_path.read_text(encoding="utf-8")
-        )
-        return Project(path=path, project_summary=project_summary)
-    except (ValidationError, OSError) as e:
-        return InvalidProject(path=path)
-
-
-def open_path_in_explorer(path: Path) -> None:
-
-    if not path.exists():
-        return
-
-    if os.name in ["nt", "ce"]:
-        os.startfile(os.path.normpath(path))
-    elif "darwin" in platform.system().casefold():
-        subprocess.run(["open", str(path)], check=True)
-    else:  # assume Linux or other POSIX-like
-        subprocess.run(["xdg-open", str(path)], check=True)
+from project_explorer.ui.extension.quick_button import text_button
 
 
 class ProjectCard(QWidget):
@@ -107,7 +75,13 @@ class ProjectCard(QWidget):
         self.nav_bar.previous_button.clicked.connect(
             lambda: self.bg.view_previous_image()
         )
-        self.nav_bar.open_in_button.clicked.connect(lambda: self._open_in_explorer())
+        self.nav_bar.open_in_button.clicked.connect(
+            lambda: (
+                open_path_in_explorer(self.project.path)
+                if project_is_valid(self.project)
+                else None
+            )
+        )
         self.nav_bar.edit_button.clicked.connect(lambda: self._edit_screen())
         self.nav_bar.next_button.clicked.connect(lambda: self.bg.view_next_image())
         self.nav_bar.reload_button.clicked.connect(
@@ -215,13 +189,11 @@ class ProjectCard(QWidget):
         layout = QGridLayout(my_progress_dialog)
 
         name = QLineEdit()
-        name.installEventFilter(self)
         name.setText(project_name)
 
         name.setFocusPolicy(Qt.FocusPolicy(11))
 
         tags_input = QLineEdit()
-        tags_input.installEventFilter(self)
         tags_input.setPlaceholderText("Add one or more tags <comma separated>")
 
         tags = TagList()
@@ -245,33 +217,27 @@ class ProjectCard(QWidget):
 
         additional_layout = QHBoxLayout()
 
-        def create_and_open() -> None:
+        def _create_and_open() -> None:
             path = self.project.path / "thumbnails"
             path.mkdir(exist_ok=True)
             open_path_in_explorer(path)
 
-        show_thumbnail = QPushButton()
-        show_thumbnail.setText("Open thumbnails folder")
-        show_thumbnail.clicked.connect(lambda: create_and_open())
+        show_thumbnail = text_button("Open thumbnails folder",_create_and_open)
         additional_layout.addWidget(show_thumbnail)
-
-        save = QPushButton()
-        save.setText("&Save")
 
         def _save_clicked() -> None:
             self._save_project(name.text(), tags.get_tags())
             my_progress_dialog.close()
 
-        save.clicked.connect(_save_clicked)
+        save = text_button("&Save",_save_clicked)
         additional_layout.addWidget(save)
 
-        cancel = QPushButton()
-        cancel.setText("&Cancel")
-        cancel.clicked.connect(lambda: my_progress_dialog.close())
+        cancel = text_button("&Cancel", lambda: my_progress_dialog.close())
         additional_layout.addWidget(cancel)
 
         layout.addLayout(additional_layout, 3, 0, 1, 2)
 
+        # TODO: is this needed?
         for button in my_progress_dialog.findChildren(QPushButton):
             button.setDefault(False)
             button.setAutoDefault(False)
@@ -279,7 +245,7 @@ class ProjectCard(QWidget):
         my_progress_dialog.show()
 
     def _save_project(self, name: str, tags: list[str]) -> None:
-        if not isinstance(self.project, Project):
+        if not project_is_valid(self.project):
             return
 
         self.project.project_summary.name = name
@@ -291,10 +257,3 @@ class ProjectCard(QWidget):
             file.write(self.project.project_summary.model_dump_json())
 
         self._update_project()
-
-    def _open_in_explorer(self) -> None:
-
-        if self.project is None:
-            return
-
-        open_path_in_explorer(self.project.path)

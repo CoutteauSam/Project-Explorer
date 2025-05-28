@@ -28,8 +28,12 @@ from project_explorer.data.project import (
 
 from project_explorer.data.query import Query, parse_query, InvalidQuery
 
+from project_explorer.io.project import load_project
+
+from project_explorer.ui.extension.quick_button import text_button
+
 from project_explorer.ui.flow_layout import FlowLayout
-from project_explorer.ui.project_card import ProjectCard, load_project
+from project_explorer.ui.project_card import ProjectCard
 from project_explorer.ui.image_loader import ImageLoader
 from project_explorer.ui.line_edit_history import (
     LineEditHistory,
@@ -75,11 +79,7 @@ class ProjectBrowser(QWidget):
 
         tools_layout = QGridLayout()
 
-        self.add_new_project_button = QPushButton()
-        self.add_new_project_button.setText("New Project")
-        self.add_new_project_button.clicked.connect(
-            lambda: self._create_new_project_action()
-        )
+        self.add_new_project_button = text_button("New Project",self._create_new_project_action)
         self.add_new_project_button.setEnabled(False)
 
         tools_layout.addWidget(self.add_new_project_button, 0, 0)
