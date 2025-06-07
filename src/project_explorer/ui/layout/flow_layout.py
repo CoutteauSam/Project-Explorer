@@ -6,46 +6,9 @@ from PySide6.QtCore import Qt, QMargins, QPoint, QRect, QSize
 
 from project_explorer.utility.typing import copy_method_params
 
+from project_explorer.ui.layout.linear_layout import LinearLayout
 
-class FlowLayout(QLayout):
-    @copy_method_params(QLayout.__init__)
-    def __init__(self, parent: QWidget | None, *args: Any, **kwargs: Any) -> None:
-        super().__init__(parent, *args, **kwargs)
-
-        if parent is not None:
-            self.setContentsMargins(QMargins(0, 0, 0, 0))
-
-        self._item_list: list[QLayoutItem] = []
-
-    def __del__(self) -> None:
-        while self.count():
-            self.takeAt(0)
-
-    def insertItem(self, index: int, item: QLayoutItem) -> None:
-        self._item_list.insert(index, item)
-
-    def addItem(self, item: QLayoutItem) -> None:
-        self._item_list.append(item)
-
-    def insertWidget(self, index: int, widget: QWidget) -> None:
-        self.addChildWidget(widget)
-        self.insertItem(index, QWidgetItem(widget))
-
-    def count(self) -> int:
-        return len(self._item_list)
-
-    def itemAt(self, index: int) -> QLayoutItem | None:
-        if 0 <= index < len(self._item_list):
-            return self._item_list[index]
-
-        return None
-
-    def takeAt(self, index: int) -> QLayoutItem:
-        if 0 <= index < len(self._item_list):
-            return self._item_list.pop(index)
-
-        raise ValueError("invalid index")
-
+class FlowLayout(LinearLayout):
     def expandingDirections(self) -> Qt.Orientation:
         return Qt.Orientation(0)
 
@@ -80,7 +43,7 @@ class FlowLayout(QLayout):
         line_height = 0
         spacing = self.spacing()
 
-        for item in self._item_list:
+        for item in self.get_items():
             style = item.widget().style()
             layout_spacing_x = style.layoutSpacing(
                 QSizePolicy.ControlType.PushButton,

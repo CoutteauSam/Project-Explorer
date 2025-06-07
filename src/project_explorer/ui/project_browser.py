@@ -32,7 +32,7 @@ from project_explorer.io.project import load_project
 
 from project_explorer.ui.extension.quick_button import text_button
 
-from project_explorer.ui.flow_layout import FlowLayout
+from project_explorer.ui.layout.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard
 from project_explorer.ui.image_loader import ImageLoader
 from project_explorer.ui.line_edit_history import (
@@ -40,6 +40,7 @@ from project_explorer.ui.line_edit_history import (
     LineEditHistorySubmittedEvent,
 )
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
+from project_explorer.ui.layout.dynamic_grid_layout import DynamicGridLayout
 
 
 def load_projects_from_path(
@@ -101,7 +102,8 @@ class ProjectBrowser(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.project_cards: SortedFlowContainer[Path] = SortedFlowContainer()
+        self.project_cards: SortedFlowContainer[Path] = SortedFlowContainer(layout=DynamicGridLayout(None))
+        self.project_cards.layout().setSpacing(10)
         self.project_cards.setContentsMargins(20, 0, 20, 0)
 
         scroll_area.setWidget(self.project_cards)

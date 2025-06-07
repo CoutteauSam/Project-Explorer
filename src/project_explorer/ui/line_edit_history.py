@@ -31,7 +31,7 @@ from project_explorer.data.query import Query, parse_query, InvalidQuery
 from project_explorer.ui.extension.widget import Widget
 from project_explorer.ui.extension.event import PropagatingEvent
 
-from project_explorer.ui.flow_layout import FlowLayout
+from project_explorer.ui.layout.flow_layout import FlowLayout
 from project_explorer.ui.project_card import ProjectCard
 from project_explorer.ui.image_loader import ImageLoader
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer

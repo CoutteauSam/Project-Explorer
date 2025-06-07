@@ -17,13 +17,15 @@ from PySide6.QtWidgets import (
 
 from project_explorer.utility.typing import copy_method_params
 
-from project_explorer.ui.flow_layout import FlowLayout
+from project_explorer.ui.layout.flow_layout import FlowLayout
+from project_explorer.ui.layout.linear_layout import LinearLayout
 
 Key = TypeVar("Key")
 
 
 class SortedFlowContainer(QWidget, Generic[Key]):
     _elements: SortedDict[Key, QWidget]
+    _layout: LinearLayout
 
     @copy_method_params(QWidget.__init__)
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -31,7 +33,12 @@ class SortedFlowContainer(QWidget, Generic[Key]):
 
         self._elements = SortedDict()
 
-        self._layout = FlowLayout(self)
+        if "layout" in kwargs:
+            # Python type system is to ass to support this properly
+            self._layout = kwargs["layout"]
+            self.setLayout(self._layout)
+        else:
+            self._layout = FlowLayout(self)
 
     def has_element(self, key: Key) -> bool:
         return key in self._elements

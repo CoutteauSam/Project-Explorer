@@ -21,7 +21,6 @@ from project_explorer.assets import close
 from project_explorer.ui.extension.widget import Widget
 from project_explorer.ui.extension.event import PropagatingEvent
 
-from project_explorer.ui.flow_layout import FlowLayout
 from project_explorer.ui.sorted_flow_container import SortedFlowContainer
 
 
@@ -46,7 +45,6 @@ class RemoveTagEvent(PropagatingEvent):
     def __init__(self, tag: "Tag"):
         super().__init__(QEvent.Type(self.s_type))
         self.tag = tag
-
 
 class Tag(Widget):
     _editable: bool = False

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from PySide6.QtGui import QPixmap, QPalette
-from PySide6.QtCore import Qt, QEvent
+from PySide6.QtCore import Qt, QEvent, QTimer
 
 from project_explorer.utility.typing import copy_method_params
 
@@ -45,7 +45,6 @@ class ProjectCard(QWidget):
     @copy_method_params(QWidget.__init__)
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.setFixedSize(200, 200)
 
         pal = QPalette()
         pal.setColor(QPalette.ColorRole.Window, "#555555")
@@ -204,8 +203,14 @@ class ProjectCard(QWidget):
         def _add_new_tags() -> None:
             for tag_str in tags_input.text().split(","):
                 tags.add_tag(tag_str.strip())
-
             tags_input.setText("")
+
+            # Not the most elegant solution, but when adding tags
+            # There width is still zero when initially placing them
+            # only after some drawing/etc do they have a correct size
+            # Which will not trigger a resize
+            QTimer.singleShot(0,lambda: my_progress_dialog.adjustSize())
+        
 
         tags_input.returnPressed.connect(_add_new_tags)
 

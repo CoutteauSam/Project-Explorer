@@ -22,6 +22,6 @@ def copy_method_params(
 class Abstract:
     def __new__(cls, *args:Any, **kwargs:Any) -> Self:
         print(cls)
-        if getattr(cls,"__abstract__",False):
+        if "__abstract__" in cls.__dict__ and getattr(cls,"__abstract__",False):
             raise TypeError("Initializing abstract base class")
         return super().__new__(cls,*args,**kwargs)
